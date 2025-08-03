@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { loginWithTemporaryPassword } from '../services/authService';
-import type { UserModel } from '../models/Users';
+import type { BusinessUserModel } from '../models/BusinessUsers';
 import { PasswordChangeForm } from './PasswordChangeForm';
 
 interface LoginFormProps {
-  onLoginSuccess: (user: UserModel) => void;
+  onLoginSuccess: (user: BusinessUserModel) => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
@@ -14,7 +14,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserModel | null>(null);
+  const [currentUser, setCurrentUser] = useState<BusinessUserModel | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

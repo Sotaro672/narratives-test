@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { crmDb, crmAuth } from '../config/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
-import UserModel from '../models/Users';
+import BusinessUserModel from '../models/BusinessUsers';
 import { EmailService } from '../services/emailService';
 import { deleteUserFromAuth } from '../services/authService';
 import './MemberManagement.css';
@@ -15,7 +15,7 @@ interface MemberManagementProps {
 
 interface MemberInfo {
   id: string;
-  user: UserModel;
+  user: BusinessUserModel;
   status: string;
   emailVerified: boolean;
 }
@@ -39,7 +39,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
     setLoading(true);
     try {
       const membersQuery = query(
-        collection(crmDb, 'users'),
+        collection(crmDb, 'business_users'),
         where('belong_to', 'array-contains', companyId)
       );
       
@@ -48,7 +48,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        const user = UserModel.fromDocument({
+        const user = BusinessUserModel.fromDocument({
           data: () => data
         });
         
@@ -74,7 +74,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
     if (!companyId) return;
 
     const membersQuery = query(
-      collection(crmDb, 'users'),
+      collection(crmDb, 'business_users'),
       where('belong_to', 'array-contains', companyId)
     );
 
@@ -84,7 +84,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
         
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          const user = UserModel.fromDocument({
+          const user = BusinessUserModel.fromDocument({
             data: () => data
           });
           
@@ -112,7 +112,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
     try {
       setLoading(true);
       
-      await updateDoc(doc(crmDb, 'users', memberId), {
+      await updateDoc(doc(crmDb, 'business_users', memberId), {
         role: newRoleValue,
         updated_at: new Date()
       });
@@ -167,8 +167,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({
       }
       
       try {
-        // Firestoreからユーザーを削除
-        await deleteDoc(doc(crmDb, 'users', memberId));
+        // Firestoreからユーザーを削除（business_usersコレクション）
+        await deleteDoc(doc(crmDb, 'business_users', memberId));
         console.log(`Firestoreからユーザー削除成功: ${memberName} (ID: ${memberId})`);
       } catch (firestoreError) {
         console.error('Firestore削除エラー:', firestoreError);

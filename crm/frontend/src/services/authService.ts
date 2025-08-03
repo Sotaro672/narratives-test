@@ -13,11 +13,11 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { crmAuth, crmDb } from '../config/firebase'; // CRM認証とFirestoreを使用
-import { UserModel } from '../models/Users';
+import { BusinessUserModel } from '../models/BusinessUsers';
 
 export interface AuthResult {
   success: boolean;
-  user?: UserModel;
+  user?: BusinessUserModel;
   error?: string;
   requiresPasswordChange?: boolean;
 }
@@ -44,29 +44,34 @@ export const createUserAccount = async (userData: {
     
     const firebaseUser = userCredential.user;
 
-    // UserModelインスタンス作成
-    const newUser = new UserModel({
+    // BusinessUserModelインスタンス作成
+    const newUser = new BusinessUserModel({
       userId: firebaseUser.uid,
       firstName: userData.firstName,
       firstNameKatakana: userData.firstNameKatakana,
       lastName: userData.lastName,
       lastNameKatakana: userData.lastNameKatakana,
       emailAddress: userData.email,
+      emailVerified: false,
       role: userData.role || 'user',
+      status: 'active',
+      belongTo: [],
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
-    // Firestoreにユーザー情報を保存
-    await setDoc(doc(crmDb, 'users', firebaseUser.uid), {
+    // Firestoreにユーザー情報を保存（business_usersコレクション）
+    await setDoc(doc(crmDb, 'business_users', firebaseUser.uid), {
       user_id: newUser.userId,
       first_name: newUser.firstName,
       first_name_katakana: newUser.firstNameKatakana,
       last_name: newUser.lastName,
       last_name_katakana: newUser.lastNameKatakana,
       email_address: newUser.emailAddress,
+      email_verified: newUser.emailVerified,
       role: newUser.role,
-      belong_to: [], // 初期値として空配列を設定
+      status: newUser.status,
+      belong_to: newUser.belongTo,
       created_at: serverTimestamp(),
       updated_at: serverTimestamp()
     });
@@ -113,8 +118,8 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
     const userCredential = await signInWithEmailAndPassword(crmAuth, email, password);
     const firebaseUser = userCredential.user;
 
-    // Firestoreからユーザー情報を取得
-    const userDoc = await getDoc(doc(crmDb, 'users', firebaseUser.uid));
+    // Firestoreからユーザー情報を取得（business_usersコレクション）
+    const userDoc = await getDoc(doc(crmDb, 'business_users', firebaseUser.uid));
     
     if (!userDoc.exists()) {
       throw new Error('ユーザー情報が見つかりません');
@@ -122,25 +127,29 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
 
     const userData = userDoc.data();
     
-    // ログイン成功時にFirestoreのステータスを更新
-    await updateDoc(doc(crmDb, 'users', firebaseUser.uid), {
+    // ログイン成功時にFirestoreのステータスを更新（business_usersコレクション）
+    await updateDoc(doc(crmDb, 'business_users', firebaseUser.uid), {
       last_login_at: new Date(),
       updated_at: new Date(),
       status: 'active', // ログイン成功時にステータスをアクティブに
       email_verified: true // ログイン成功時に認証済みに
     });
     
-    // UserModelインスタンス作成
-    const user = new UserModel({
+    // BusinessUserModelインスタンス作成
+    const user = new BusinessUserModel({
       userId: userData.user_id,
       firstName: userData.first_name,
       firstNameKatakana: userData.first_name_katakana,
       lastName: userData.last_name,
       lastNameKatakana: userData.last_name_katakana,
       emailAddress: userData.email_address,
+      emailVerified: userData.email_verified || true,
       role: userData.role,
+      status: userData.status || 'active',
+      belongTo: userData.belong_to || [],
       createdAt: userData.created_at?.toDate(),
-      updatedAt: userData.updated_at?.toDate()
+      updatedAt: userData.updated_at?.toDate(),
+      lastLoginAt: new Date()
     });
 
     console.log('User logged in:', user.getFullName());
@@ -202,15 +211,15 @@ export const getCurrentUser = (): FirebaseUser | null => {
 /**
  * Firestoreからユーザー詳細情報を取得
  */
-export const getUserDetails = async (userId: string): Promise<UserModel | null> => {
+export const getUserDetails = async (userId: string): Promise<BusinessUserModel | null> => {
   try {
-    const userDoc = await getDoc(doc(crmDb, 'users', userId));
+    const userDoc = await getDoc(doc(crmDb, 'business_users', userId));
     
     if (!userDoc.exists()) {
       return null;
     }
 
-    return UserModel.fromDocument(userDoc);
+    return BusinessUserModel.fromDocument(userDoc);
     
   } catch (error) {
     console.error('Error getting user details:', error);
@@ -234,8 +243,8 @@ export const loginWithTemporaryPassword = async (
 
     console.log('Firebase auth successful for user:', firebaseUser.uid);
 
-    // Firestoreからユーザー詳細情報を取得
-    const userDoc = await getDoc(doc(crmDb, 'users', firebaseUser.uid));
+    // Firestoreからユーザー詳細情報を取得（business_usersコレクション）
+    const userDoc = await getDoc(doc(crmDb, 'business_users', firebaseUser.uid));
     
     if (!userDoc.exists()) {
       await signOut(crmAuth);
@@ -246,7 +255,7 @@ export const loginWithTemporaryPassword = async (
     }
 
     const userData = userDoc.data();
-    const user = UserModel.fromDocument(userDoc);
+    const user = BusinessUserModel.fromDocument(userDoc);
 
     console.log('User data retrieved:', user.toJSON());
 
@@ -262,8 +271,8 @@ export const loginWithTemporaryPassword = async (
       };
     }
 
-    // 最終ログイン時刻を更新し、ステータスとメール認証状態も更新
-    await updateDoc(doc(crmDb, 'users', firebaseUser.uid), {
+    // 最終ログイン時刻を更新し、ステータスとメール認証状態も更新（business_usersコレクション）
+    await updateDoc(doc(crmDb, 'business_users', firebaseUser.uid), {
       last_login_at: new Date(),
       updated_at: new Date(),
       status: 'active', // ログイン成功時にステータスをアクティブに
@@ -322,8 +331,8 @@ export const changePassword = async (
     // パスワードを更新
     await updatePassword(user, newPassword);
 
-    // Firestoreから一時パスワードを削除
-    await updateDoc(doc(crmDb, 'users', user.uid), {
+    // Firestoreから一時パスワードを削除（business_usersコレクション）
+    await updateDoc(doc(crmDb, 'business_users', user.uid), {
       temporary_password: null,
       password_changed_at: new Date(),
       updated_at: new Date()
@@ -364,7 +373,7 @@ export const hasTemporaryPassword = async (): Promise<boolean> => {
       return false;
     }
 
-    const userDoc = await getDoc(doc(crmDb, 'users', firebaseUser.uid));
+    const userDoc = await getDoc(doc(crmDb, 'business_users', firebaseUser.uid));
     if (!userDoc.exists()) {
       return false;
     }

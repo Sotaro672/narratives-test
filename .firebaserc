@@ -6,7 +6,7 @@
     "narratives-test-64976": {
       "hosting": {
         "crm": [
-          "narratives-crm-site"
+          "narratives-crm"
         ],
         "sns": [
           "narratives-test-64976"

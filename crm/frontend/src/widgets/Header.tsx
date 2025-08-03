@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import UserModel from '../models/Users';
+import { BusinessUserModel } from '../models/BusinessUsers';
 import NotificationModel from '../models/Notifications';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { crmDb } from '../config/firebase'; // CRM Firestoreを使用
@@ -13,7 +13,7 @@ interface HeaderProps {
   isLoggedIn: boolean;
   onAuthChange: (loginStatus: boolean) => void;
   onShowAuth: (mode?: 'signin' | 'login') => void;
-  currentUser?: UserModel | null;
+  currentUser?: BusinessUserModel | null;
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen, isLoggedIn, onAuthChange, onShowAuth, currentUser }) => {
@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen, isLoggedIn
   };
 
   // ユーザーの所属会社情報を取得
-  const fetchCompanyName = async (user: UserModel) => {
+  const fetchCompanyName = async (user: BusinessUserModel) => {
     console.log('fetchCompanyName called with user:', user);
     console.log('user.belongTo:', user.belongTo);
     console.log('user.belongTo type:', typeof user.belongTo);

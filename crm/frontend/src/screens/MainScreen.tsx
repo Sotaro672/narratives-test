@@ -6,7 +6,7 @@ import AuthBody from '../widgets/AuthBody';
 import OrganizationBody from '../widgets/OrganizationBody';
 import NewsField from '../widgets/NewsField';
 import Customer from '../widgets/Customer';
-import UserModel from '../models/Users';
+import BusinessUserModel from '../models/BusinessUsers';
 import { logoutUser } from '../services/authService';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { crmDb } from '../config/firebase'; // CRM Firestoreを使用
@@ -20,14 +20,14 @@ const MainScreen: React.FC = () => {
   const [showNewsBody, setShowNewsBody] = useState(false); // NewsFieldの表示状態を管理
   const [showCustomerBody, setShowCustomerBody] = useState(false); // CustomerBodyの表示状態を管理
   const [authMode, setAuthMode] = useState<'signin' | 'login'>('signin'); // 認証モードを管理
-  const [currentUser, setCurrentUser] = useState<UserModel | null>(null); // ログインユーザー情報
+  const [currentUser, setCurrentUser] = useState<BusinessUserModel | null>(null); // ログインユーザー情報
 
   // ユーザー情報を再取得する関数
   const refreshCurrentUser = async () => {
     if (currentUser) {
       try {
         console.log('refreshCurrentUser called for user:', currentUser.userId);
-        const userDocRef = doc(crmDb, 'users', currentUser.userId);
+        const userDocRef = doc(crmDb, 'business_users', currentUser.userId);
         const userDoc = await getDoc(userDocRef);
         
         if (userDoc.exists()) {
@@ -45,13 +45,13 @@ const MainScreen: React.FC = () => {
             // 更新後に再度取得
             const updatedUserDoc = await getDoc(userDocRef);
             if (updatedUserDoc.exists()) {
-              const updatedUser = UserModel.fromDocument(updatedUserDoc);
+              const updatedUser = BusinessUserModel.fromDocument(updatedUserDoc);
               setCurrentUser(updatedUser);
               console.log('User info refreshed with belong_to field:', updatedUser);
               console.log('User belongTo after refresh:', updatedUser.belongTo);
             }
           } else {
-            const updatedUser = UserModel.fromDocument(userDoc);
+            const updatedUser = BusinessUserModel.fromDocument(userDoc);
             setCurrentUser(updatedUser);
             console.log('User info refreshed:', updatedUser);
             console.log('User belongTo:', updatedUser.belongTo);
@@ -91,7 +91,7 @@ const MainScreen: React.FC = () => {
     setShowAuthBody(true);
   };
 
-  const handleAuthSuccess = async (user?: UserModel) => {
+  const handleAuthSuccess = async (user?: BusinessUserModel) => {
     setIsLoggedIn(true);
     setShowAuthBody(false);
     if (user) {
@@ -103,7 +103,7 @@ const MainScreen: React.FC = () => {
       
       // ログイン後すぐにユーザー情報を更新（belong_toフィールドを確認・追加）
       try {
-        const userDocRef = doc(crmDb, 'users', user.userId);
+        const userDocRef = doc(crmDb, 'business_users', user.userId);
         const userDoc = await getDoc(userDocRef);
         
         if (userDoc.exists()) {
@@ -121,13 +121,13 @@ const MainScreen: React.FC = () => {
             // 更新後に再度取得
             const updatedUserDoc = await getDoc(userDocRef);
             if (updatedUserDoc.exists()) {
-              const updatedUser = UserModel.fromDocument(updatedUserDoc);
+              const updatedUser = BusinessUserModel.fromDocument(updatedUserDoc);
               setCurrentUser(updatedUser);
               console.log('User updated with belong_to field:', updatedUser);
             }
           } else {
-            // 最新のユーザー情報でUserModelを作成し直す
-            const freshUser = UserModel.fromDocument(userDoc);
+            // 最新のユーザー情報でBusinessUserModelを作成し直す
+            const freshUser = BusinessUserModel.fromDocument(userDoc);
             setCurrentUser(freshUser);
             console.log('User updated with fresh data:', freshUser);
             console.log('Fresh user belongTo:', freshUser.belongTo);
