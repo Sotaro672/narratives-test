@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import UserModel from '../models/Users';
+import { BusinessUserModel } from '../models/BusinessUsers';
 import { createUserAccount, loginUser } from '../services/authService';
 import './AuthBody.css';
 
 interface AuthBodyProps {
-  onAuthSuccess: (user?: UserModel) => void;
+  onAuthSuccess: (user?: BusinessUserModel) => void;
   onCancel: () => void;
   initialMode?: 'signin' | 'login';
 }

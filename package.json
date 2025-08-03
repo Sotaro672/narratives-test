@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "description": "Narratives CRM and SNS monorepo",
   "private": true,
-  "workspaces": [
-    "crm/frontend",
-    "crm/backend",
-    "crm/functions"
-  ],
   "scripts": {
     "install:all": "npm install && npm run install:crm && npm run install:sns",
     "install:crm": "cd crm/frontend && npm install && cd ../backend && npm install && cd ../functions && npm install",

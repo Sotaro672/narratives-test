@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { hasTemporaryPassword } from '../services/authService';
 import { PasswordChangeForm } from './PasswordChangeForm';
-import type { UserModel } from '../models/Users';
+import type { BusinessUserModel } from '../models/BusinessUsers';
 
 interface PasswordCheckWrapperProps {
   children: React.ReactNode;
-  user: UserModel | null;
+  user: BusinessUserModel | null;
 }
 
 export const PasswordCheckWrapper: React.FC<PasswordCheckWrapperProps> = ({

@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "narratives-test-64976"
+    "default": "narratives-test-64976",
+    "production": "narratives-test-64976"
   },
   "targets": {
     "narratives-test-64976": {

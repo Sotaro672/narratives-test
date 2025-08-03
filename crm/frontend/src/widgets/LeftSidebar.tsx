@@ -1,5 +1,5 @@
 import React from 'react';
-import UserModel from '../models/Users';
+import { BusinessUserModel } from '../models/BusinessUsers';
 import './LeftSidebar.css';
 
 interface LeftSidebarProps {
@@ -8,7 +8,7 @@ interface LeftSidebarProps {
   onShowOrganization?: () => void;
   onShowNews?: () => void;
   onShowCustomer?: () => void;
-  currentUser?: UserModel | null;
+  currentUser?: BusinessUserModel | null;
 }
 
 interface MenuItem {
