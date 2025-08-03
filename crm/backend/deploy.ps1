@@ -11,7 +11,7 @@ Write-Host "Starting deployment to Cloud Run..." -ForegroundColor Green
 # Check if service account file exists
 if (-not (Test-Path -Path ".\narratives-test-service_account.json" -PathType Leaf)) {
     Write-Host "Error: Service account file 'narratives-test-service_account.json' not found in the current directory!" -ForegroundColor Red
-    Write-Host "Please download your service account key from Google Cloud Console and save it as 'narratives-crm-service_account.json' in the backend directory." -ForegroundColor Yellow
+    Write-Host "Please download your service account key from Google Cloud Console and save it as 'narratives-test-service_account.json' in the backend directory." -ForegroundColor Yellow
     Write-Host "Instructions: https://cloud.google.com/iam/docs/creating-managing-service-account-keys" -ForegroundColor Cyan
     exit 1
 }
@@ -43,8 +43,8 @@ gcloud run deploy $SERVICE_NAME `
   --max-instances 100 `
   --set-env-vars=
   "GO_ENV=production,
-  GOOGLE_CLOUD_PROJECT=narratives-crm,
-  GOOGLE_APPLICATION_CREDENTIALS=./narratives-crm-service_account.json,
+  GOOGLE_CLOUD_PROJECT=narratives-test-64976,
+  GOOGLE_APPLICATION_CREDENTIALS=./narratives-test-service_account.json,
   CLOUD_RUN_SERVICE_URL=https://narratives-crm-us-central1.run.app,
   SMTP_HOST=smtp.gmail.com,
   SMTP_PORT=587,

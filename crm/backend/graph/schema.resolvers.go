@@ -92,7 +92,7 @@ func (r *mutationResolver) DeleteInteraction(ctx context.Context, id string) (bo
 // GetAvatarUploadURL is the resolver for the getAvatarUploadUrl field.
 func (r *mutationResolver) GetAvatarUploadURL(ctx context.Context, filename string, contentType string, folder *string) (*model.UploadURL, error) {
 	// サービスアカウントファイルのパス
-	credentialsPath := "./narratives-crm-service_account.json"
+	credentialsPath := "./narratives-test-service_account.json"
 
 	// サービスアカウント情報を読み取り
 	serviceAccount, err := readServiceAccountKey(credentialsPath)
@@ -108,7 +108,7 @@ func (r *mutationResolver) GetAvatarUploadURL(ctx context.Context, filename stri
 	defer client.Close()
 
 	// バケット名を設定（Google Cloud Storage のデフォルトバケット）
-	bucketName := "narratives-crm.appspot.com"
+	bucketName := "narratives-test-64976.appspot.com"
 
 	// フォルダパスを設定（デフォルトは "avatars"）
 	folderPath := "avatars"

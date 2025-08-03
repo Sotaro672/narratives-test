@@ -39,7 +39,7 @@ WORKDIR /root/
 COPY --from=builder /dist/main .
 
 # Copy service account key
-COPY --from=builder /build/narratives-crm-service_account.json ./narratives-crm-service_account.json
+COPY --from=builder /build/narratives-test-service_account.json ./narratives-test-service_account.json
 
 # Copy email templates
 COPY --from=builder /build/templates ./templates

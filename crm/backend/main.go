@@ -34,7 +34,7 @@ func initFirebase() error {
 
 	// Firebaseプロジェクトの設定
 	config := &firebase.Config{
-		ProjectID: "narratives-crm", // CRM用プロジェクトIDに変更
+		ProjectID: "narratives-test-64976", // 統合されたプロジェクトIDに変更
 	}
 
 	// サービスアカウントキーのパス

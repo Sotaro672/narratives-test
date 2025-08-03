@@ -9,7 +9,7 @@ const NARRATIVES_API_BASE_URL = "https://narratives-api-765852113927.asia-northe
 // CORS proxy function for narratives-test API
 export const narrativesApiProxy = functions.https.onRequest(async (req, res) => {
   // Set CORS headers
-  res.set("Access-Control-Allow-Origin", "https://narratives-crm.web.app");
+  res.set("Access-Control-Allow-Origin", "https://narratives-crm-site.web.app");
   res.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
   res.set("Access-Control-Allow-Credentials", "true");
