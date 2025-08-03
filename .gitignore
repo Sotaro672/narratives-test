@@ -1,8 +1,15 @@
+# ========================================
+# UNIFIED .gitignore for narratives-test
+# CRM + SNS + Flutter + Go + Node.js
+# ========================================
+
 # Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Environment variables
 .env
@@ -10,11 +17,14 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
 
 # Build outputs
 dist/
+dist-ssr/
 build/
 *.exe
+*.exe~
 main
 server
 server-local.exe
@@ -22,28 +32,36 @@ server.exe
 narratives-crm-backend.exe
 
 # Logs
-logs
+logs/
 *.log
+firebase-debug.log
+firestore-debug.log
 
 # Runtime data
-pids
+pids/
 *.pid
 *.seed
 *.pid.lock
 
 # Firebase
 .firebase/
-firebase-debug.log
-firestore-debug.log
 
-# Go
+# Go specific
 *.so
+*.dll
 *.dylib
 *.test
 *.out
 go.work
+vendor/
+backend/go.mod
+backend/go.sum
+backend/*.exe
+backend/main.exe
+backend/server.exe
+backend/server-local.exe
 
-# Flutter
+# Flutter/Dart specific
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -55,13 +73,25 @@ flutter_*.png
 flutter_*.exe
 flutter_service_worker.js
 version.json
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.packages
+flutter_app/pubspec.lock
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
 
 # IDE
 .vscode/
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
 *~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # OS
 .DS_Store
@@ -75,12 +105,21 @@ Thumbs.db
 # Service account keys (security)
 *service_account*.json
 *service-account*.json
+backend/narratives-test-00fc9efaa447.json
+backend/narratives-465900-service_account.json
+# Allow specific configuration files
+!pubspec.json
+!firebase.json
+!cors.json
+!package.json
 
 # Temporary files
 *.tmp
 *.temp
+*.txt
 tmp/
 temp/
+flutter_app/test.txt
 
 # Database
 *.db
@@ -93,3 +132,6 @@ coverage/
 
 # Vite
 .vite/
+
+# Local development files
+*.local

@@ -1,7 +1,7 @@
 {
   "firestore": {
     "rules": "firestore.rules",
-    "indexes": "crm/firestore.indexes.json"
+    "indexes": "firestore.indexes.json"
   },
   "functions": {
     "source": "crm/functions",
@@ -64,7 +64,7 @@
     }
   ],
   "storage": {
-    "rules": "crm/storage.rules"
+    "rules": "storage.rules"
   },
   "extensions": {}
 }

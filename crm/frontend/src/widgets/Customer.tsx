@@ -3,17 +3,17 @@ import { snsAuth, crmAuth } from '../config/firebase';
 import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import './Customer.css';
 
-// narratives-test API エンドポイント
-const NARRATIVES_API_BASE_URL = 'https://narratives-api-765852113927.asia-northeast1.run.app';
+// SNS Backend API エンドポイント（新しいCloud Runサービス）
+const SNS_API_BASE_URL = 'https://narratives-test-221090465383.asia-northeast1.run.app';
 
 // Development proxy endpoint (for local testing only)
 const isDevelopment = import.meta.env.DEV;
 
-// Production: Use Firebase Functions proxy to avoid CORS
-const PRODUCTION_API_BASE_URL = '/api';
+// Production: SNS Backend GraphQL endpoint
+const PRODUCTION_API_BASE_URL = `${SNS_API_BASE_URL}/query`;
 
-// 開発環境ではViteプロキシを使用
-const API_BASE_URL = isDevelopment ? '/proxy-api' : PRODUCTION_API_BASE_URL;
+// 開発環境でもプロダクションエンドポイントを使用（CORSが許可されているため）
+const API_BASE_URL = PRODUCTION_API_BASE_URL;
 
 // GraphQL スキーマ調査用クエリ
 const INTROSPECTION_QUERY = `
@@ -300,7 +300,7 @@ const Customer: React.FC = () => {
       console.log('=== CORS診断開始 ===');
       console.log('Development mode:', isDevelopment);
       console.log('Frontend Origin:', window.location.origin);
-      console.log('Direct API URL:', NARRATIVES_API_BASE_URL);
+      console.log('Direct API URL:', SNS_API_BASE_URL);
       console.log('Using API URL:', API_BASE_URL);
       console.log('SNS Auth User:', snsAuthUser.uid);
       console.log('CRM Auth User:', crmAuthUser?.uid || 'null');
@@ -418,7 +418,7 @@ const Customer: React.FC = () => {
     setLoading(true);
     try {
       console.log('Starting to fetch from narratives-test GraphQL API...');
-      console.log('API base URL:', NARRATIVES_API_BASE_URL);
+      console.log('API base URL:', SNS_API_BASE_URL);
       console.log('Using SNS authenticated user:', snsAuthUser.uid);
       
       // SNS認証トークンを取得
@@ -544,7 +544,7 @@ const Customer: React.FC = () => {
     <div className="customer-container">
       <div className="customer-header">
         <h2>SNSユーザー管理システム</h2>
-        <p>業務ユーザーとしてログインし、narratives-test API ({NARRATIVES_API_BASE_URL}) からSNSユーザー情報を収集・管理できます</p>
+        <p>業務ユーザーとしてログインし、narratives-test API ({SNS_API_BASE_URL}) からSNSユーザー情報を収集・管理できます</p>
         <p>🔸 narratives-crm: 業務ユーザー用認証 | 🔸 narratives-test: SNS情報収集専用</p>
       </div>
 

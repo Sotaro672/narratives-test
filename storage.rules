@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // ビジネスユーザーかどうかを判定する関数
+    function isBusinessUser() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/business_users/$(request.auth.uid));
+    }
+    
+    // 認証済みユーザーは基本的にファイルの読み取り・書き込みが可能
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // パブリックアクセス可能なファイル
+    match /public/{allPaths=**} {
+      allow read;
+    }
+    
+    // ユーザープロフィール画像（SNS用）
+    match /profile-images/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // ビジネスユーザーは全てのプロフィール画像を読み取り可能
+      allow read: if isBusinessUser();
+    }
+    
+    // アバター画像（SNS用）
+    match /avatars/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // ビジネスユーザーは全てのアバター画像を読み取り可能
+      allow read: if isBusinessUser();
+    }
+    
+    // 会社アセット（CRM用）
+    match /company-assets/{companyId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // ビジネス関連ファイル（CRM用）
+    match /business/{allPaths=**} {
+      allow read, write: if isBusinessUser();
+    }
+    
+    // 一時アップロードファイル
+    match /temp/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
