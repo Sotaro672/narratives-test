@@ -4,9 +4,9 @@ import * as admin from "firebase-admin";
 // Initialize Firebase Admin
 admin.initializeApp();
 
-const NARRATIVES_API_BASE_URL = "https://narratives-api-765852113927.asia-northeast1.run.app";
+const NARRATIVES_SNS_API_BASE_URL = "https://narratives-api-765852113927.asia-northeast1.run.app";
 
-// CORS proxy function for narratives-test API
+// CORS proxy function for narratives-test SNS API
 export const narrativesApiProxy = functions.https.onRequest(async (req, res) => {
   // Set CORS headers
   res.set("Access-Control-Allow-Origin", "https://narratives-crm-site.web.app");
@@ -23,7 +23,7 @@ export const narrativesApiProxy = functions.https.onRequest(async (req, res) => 
   try {
     // Extract the path from the request
     const apiPath = req.path || "/";
-    const targetUrl = `${NARRATIVES_API_BASE_URL}${apiPath}`;
+    const targetUrl = `${NARRATIVES_SNS_API_BASE_URL}${apiPath}`;
     
     console.log(`Proxying ${req.method} ${targetUrl}`);
 

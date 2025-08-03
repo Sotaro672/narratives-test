@@ -83,14 +83,25 @@ npm run deploy:sns
 
 ## Configuration
 
-### Firebase Projects
-- CRM: `narratives-crm`
-- SNS: `narratives-test-64976`
+### Firebase Projects & Cloud Run Services
+- **CRM**: 
+  - Firebase Project: `narratives-crm`
+  - Cloud Run: `https://narratives-crm-699392181476.us-central1.run.app`
+  - Hosting: `https://narratives-crm-site.web.app`
+- **SNS**: 
+  - Firebase Project: `narratives-test-64976`
+  - Cloud Run: `https://narratives-api-765852113927.asia-northeast1.run.app`
+  - Hosting: `https://narratives-test-64976.web.app`
 
 ### Environment Variables
 Set up environment variables in each service directory:
 - `crm/backend/.env`
 - `sns/backend/.env`
+
+### API Architecture
+- CRM Frontend ↔ CRM Cloud Run (GraphQL)
+- CRM Frontend ↔ SNS Cloud Run (via Firebase Functions proxy for CORS)
+- SNS Flutter App ↔ SNS Cloud Run (GraphQL)
 
 ### Firebase Configuration
 - Shared Firestore rules in `firestore.rules`
