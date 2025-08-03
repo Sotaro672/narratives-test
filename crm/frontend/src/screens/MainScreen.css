@@ -1,0 +1,142 @@
+.main-screen {
+  min-height: 100vh;
+  width: 100vw;
+  
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.main-layout {
+  min-height: 100vh;
+  width: 100%;
+
+  transition: margin-left 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.main-layout.sidebar-open {
+  margin-left: 0; /* Sidebar is overlay, not pushing content */
+}
+
+.main-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  margin-top: auto;
+}
+
+.main-footer p {
+  margin: 0;
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+/* ニュース画面スタイル */
+.news-body {
+  flex: 1;
+  width: 100%;
+  padding: 2rem;
+  padding-top: 120px;
+  position: relative;
+  z-index: 1;
+}
+
+.news-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.news-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.news-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2.5rem;
+  background: linear-gradient(45deg, #fff, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.news-header p {
+  margin: 0;
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+/* 顧客管理画面スタイル */
+.customer-body {
+  flex: 1;
+  width: 100%;
+  padding: 2rem;
+  padding-top: 120px;
+  position: relative;
+  z-index: 1;
+}
+
+.customer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.customer-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.customer-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2.5rem;
+  background: linear-gradient(45deg, #fff, #3498db);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.customer-header p {
+  margin: 0;
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .main-layout {
+    min-height: 100vh;
+  }
+  
+  .news-body,
+  .customer-body {
+    padding: 1rem;
+    padding-top: 120px;
+  }
+  
+  .news-header,
+  .customer-header {
+    padding: 1.5rem;
+  }
+  
+  .news-header h2,
+  .customer-header h2 {
+    font-size: 2rem;
+  }
+}

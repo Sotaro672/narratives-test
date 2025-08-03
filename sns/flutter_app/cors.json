@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["http://localhost:*", "https://narratives-test-64976.web.app", "https://narratives-test-64976.firebaseapp.com"],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
+    "maxAgeSeconds": 3600
+  }
+]

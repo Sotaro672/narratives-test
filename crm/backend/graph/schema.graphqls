@@ -1,0 +1,318 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+# CRM用のカスタムスカラー型
+scalar Time
+
+# CRM - 顧客管理システム用のスキーマ定義
+
+# =====================================
+# 顧客 (Customer) 関連
+# =====================================
+
+type Customer {
+  id: ID!
+  name: String!
+  email: String!
+  phone: String
+  company: String
+  address: String
+  status: CustomerStatus!
+  createdAt: Time!
+  updatedAt: Time!
+  
+  # リレーション
+  orders: [Order!]!
+  interactions: [Interaction!]!
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+  ARCHIVED
+}
+
+input CustomerInput {
+  name: String!
+  email: String!
+  phone: String
+  company: String
+  address: String
+  status: CustomerStatus
+}
+
+input CustomerUpdateInput {
+  name: String
+  email: String
+  phone: String
+  company: String
+  address: String
+  status: CustomerStatus
+}
+
+# =====================================
+# 注文 (Order) 関連
+# =====================================
+
+type Order {
+  id: ID!
+  customerID: ID!
+  orderNumber: String!
+  status: OrderStatus!
+  totalAmount: Float!
+  currency: String!
+  orderDate: Time!
+  deliveryDate: Time
+  notes: String
+  createdAt: Time!
+  updatedAt: Time!
+  
+  # リレーション
+  customer: Customer!
+  items: [OrderItem!]!
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+type OrderItem {
+  id: ID!
+  orderID: ID!
+  productName: String!
+  quantity: Int!
+  unitPrice: Float!
+  totalPrice: Float!
+  
+  # リレーション
+  order: Order!
+}
+
+input OrderInput {
+  customerID: ID!
+  orderNumber: String!
+  totalAmount: Float!
+  currency: String!
+  orderDate: Time!
+  deliveryDate: Time
+  notes: String
+  items: [OrderItemInput!]!
+}
+
+input OrderItemInput {
+  productName: String!
+  quantity: Int!
+  unitPrice: Float!
+}
+
+# =====================================
+# インタラクション (Interaction) 関連
+# =====================================
+
+type Interaction {
+  id: ID!
+  customerID: ID!
+  type: InteractionType!
+  subject: String!
+  content: String!
+  channel: InteractionChannel!
+  status: InteractionStatus!
+  assignedTo: String
+  scheduledAt: Time
+  completedAt: Time
+  createdAt: Time!
+  updatedAt: Time!
+  
+  # リレーション
+  customer: Customer!
+}
+
+enum InteractionType {
+  EMAIL
+  PHONE_CALL
+  MEETING
+  NOTE
+  TASK
+  FOLLOW_UP
+}
+
+enum InteractionChannel {
+  EMAIL
+  PHONE
+  IN_PERSON
+  VIDEO_CALL
+  CHAT
+  SOCIAL_MEDIA
+}
+
+enum InteractionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+input InteractionInput {
+  customerID: ID!
+  type: InteractionType!
+  subject: String!
+  content: String!
+  channel: InteractionChannel!
+  assignedTo: String
+  scheduledAt: Time
+}
+
+# =====================================
+# レポート・分析用
+# =====================================
+
+type CustomerStats {
+  totalCustomers: Int!
+  activeCustomers: Int!
+  newCustomersThisMonth: Int!
+  customerGrowthRate: Float!
+}
+
+type OrderStats {
+  totalOrders: Int!
+  totalRevenue: Float!
+  ordersThisMonth: Int!
+  revenueThisMonth: Float!
+  averageOrderValue: Float!
+}
+
+type DashboardData {
+  customerStats: CustomerStats!
+  orderStats: OrderStats!
+  recentOrders: [Order!]!
+  upcomingInteractions: [Interaction!]!
+}
+
+# =====================================
+# ページネーション
+# =====================================
+
+input PaginationInput {
+  page: Int = 1
+  limit: Int = 10
+  sortBy: String = "createdAt"
+  sortOrder: SortOrder = DESC
+}
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
+type PageInfo {
+  page: Int!
+  limit: Int!
+  total: Int!
+  pages: Int!
+  hasNext: Boolean!
+  hasPrev: Boolean!
+}
+
+type CustomerConnection {
+  customers: [Customer!]!
+  pageInfo: PageInfo!
+}
+
+type OrderConnection {
+  orders: [Order!]!
+  pageInfo: PageInfo!
+}
+
+# =====================================
+# Query Root
+# =====================================
+
+type Query {
+  # 顧客関連
+  customer(id: ID!): Customer
+  customers(
+    pagination: PaginationInput
+    search: String
+    status: CustomerStatus
+  ): CustomerConnection!
+  
+  # 注文関連
+  order(id: ID!): Order
+  orders(
+    pagination: PaginationInput
+    customerID: ID
+    status: OrderStatus
+    dateFrom: Time
+    dateTo: Time
+  ): OrderConnection!
+  
+  # インタラクション関連
+  interaction(id: ID!): Interaction
+  interactions(
+    pagination: PaginationInput
+    customerID: ID
+    type: InteractionType
+    status: InteractionStatus
+  ): [Interaction!]!
+  
+  # ダッシュボード・分析
+  dashboard: DashboardData!
+  customerStats: CustomerStats!
+  orderStats: OrderStats!
+  
+  # ヘルスチェック
+  health: String!
+}
+
+# =====================================
+# ファイルアップロード関連
+# =====================================
+
+type UploadUrl {
+  url: String!
+  signedUrl: String!
+  publicUrl: String!
+  downloadUrl: String!
+  fileName: String!
+  contentType: String!
+}
+
+input UploadInput {
+  fileName: String!
+  contentType: String!
+  folder: String
+}
+
+# =====================================
+# Mutation Root
+# =====================================
+
+type Mutation {
+  # 顧客関連
+  createCustomer(input: CustomerInput!): Customer!
+  updateCustomer(id: ID!, input: CustomerUpdateInput!): Customer!
+  deleteCustomer(id: ID!): Boolean!
+  
+  # 注文関連
+  createOrder(input: OrderInput!): Order!
+  updateOrderStatus(id: ID!, status: OrderStatus!): Order!
+  deleteOrder(id: ID!): Boolean!
+  
+  # インタラクション関連
+  createInteraction(input: InteractionInput!): Interaction!
+  updateInteractionStatus(id: ID!, status: InteractionStatus!): Interaction!
+  completeInteraction(id: ID!): Interaction!
+  deleteInteraction(id: ID!): Boolean!
+  
+  # ファイルアップロード関連
+  getAvatarUploadUrl(filename: String!, contentType: String!, folder: String): UploadUrl!
+  getFileUploadUrl(filename: String!, contentType: String!, folder: String): UploadUrl!
+}

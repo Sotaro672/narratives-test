@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "narratives-crm",
+    "development": "narratives-crm"
+  },
+  "targets": {},
+  "etags": {}
+}

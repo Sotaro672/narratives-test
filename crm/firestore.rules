@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 認証済みユーザーのみ操作可能
+    match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // ユーザーコレクションの特別なルール
+    match /users/{userId} {
+      // すべての認証済みユーザーに読み取り権限を付与
+      allow read: if request.auth != null;
+      
+      // 管理者権限チェックの関数
+      function isAdmin() {
+        return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'root'];
+      }
+      
+      // 作成・更新はユーザー自身または管理者のみ可能
+      allow create, update: if request.auth != null && (
+        request.auth.uid == userId || isAdmin()
+      );
+      
+      // 削除は管理者のみ可能
+      allow delete: if request.auth != null && isAdmin();
+    }
+  }
+}

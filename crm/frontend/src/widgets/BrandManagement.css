@@ -1,0 +1,242 @@
+.brand-management-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.brand-management-container {
+  background-color: #1a1a2e;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: #e6e6e6;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.25);
+}
+
+.brand-management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #2a2a42;
+  position: sticky;
+  top: 0;
+  background-color: #1a1a2e;
+  z-index: 10;
+  border-radius: 10px 10px 0 0;
+}
+
+.brand-management-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #e6e6e6;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.close-btn:hover {
+  color: #ff6b6b;
+}
+
+.brand-management-content {
+  padding: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.create-brand-btn {
+  background-color: #4c73ff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.create-brand-btn:hover {
+  background-color: #365fe3;
+}
+
+.brands-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.brand-item {
+  background-color: #242442;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #333355;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.brand-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #4c73ff;
+}
+
+.brand-info h4 {
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.brand-kana {
+  color: #a0a0c0;
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.brand-description {
+  color: #e6e6e6;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.brand-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  color: #a0a0c0;
+  font-size: 0.8rem;
+}
+
+.no-brands-message {
+  background-color: #242442;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.create-brand-form {
+  background-color: #242442;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  border: 1px solid #333355;
+}
+
+.create-brand-form h3 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #e6e6e6;
+  font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #333355;
+  background-color: #1a1a2e;
+  color: #e6e6e6;
+  font-size: 0.9rem;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-group select {
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  color: #e6e6e6;
+  border: 1px solid #333355;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.cancel-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.submit-btn {
+  background-color: #4c73ff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.submit-btn:hover {
+  background-color: #365fe3;
+}
+
+.submit-btn:disabled,
+.cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: #a0a0c0;
+}

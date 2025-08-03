@@ -1,0 +1,25 @@
+{
+  "projects": {
+    "default": "narratives-test"
+  },
+  "targets": {
+    "narratives-test": {
+      "hosting": {
+        "crm": [
+          "narratives-crm"
+        ],
+        "sns": [
+          "narratives-test-64976"
+        ]
+      }
+    },
+    "narratives-test-64976": {
+      "hosting": {
+        "sns": [
+          "narratives-test-64976"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

@@ -1,0 +1,35 @@
+{
+  "name": "narratives-monorepo",
+  "version": "1.0.0",
+  "description": "Narratives CRM and SNS monorepo",
+  "private": true,
+  "workspaces": [
+    "crm/frontend",
+    "crm/backend",
+    "crm/functions"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:crm && npm run install:sns",
+    "install:crm": "cd crm/frontend && npm install && cd ../backend && npm install && cd ../functions && npm install",
+    "install:sns": "cd sns/flutter_app && flutter pub get",
+    "build:crm:frontend": "cd crm/frontend && npm run build",
+    "build:crm:backend": "cd crm/backend && go build -o main",
+    "build:sns:backend": "cd sns/backend && go build -o main",
+    "build:sns:app": "cd sns/flutter_app && flutter build web",
+    "dev:crm:frontend": "cd crm/frontend && npm run dev",
+    "dev:crm:backend": "cd crm/backend && go run main.go",
+    "dev:sns:backend": "cd sns/backend && go run main.go",
+    "deploy:crm": "cd crm && firebase deploy --only hosting:crm,functions",
+    "deploy:sns": "firebase deploy --only hosting:sns",
+    "lint:crm": "cd crm/frontend && npm run lint",
+    "test:crm": "cd crm/frontend && npm run test",
+    "clean": "Remove-Item -Recurse -Force crm/frontend/node_modules, crm/backend/main, sns/backend/main -ErrorAction SilentlyContinue"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

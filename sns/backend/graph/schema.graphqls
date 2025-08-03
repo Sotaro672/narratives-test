@@ -1,0 +1,34 @@
+type Query {
+  _empty: String
+  getAvatarPublicUrl(filename: String!): String!
+}
+
+type SignedUrlPayload {
+  signedUrl: String!
+  publicUrl: String!
+}
+
+type Mutation {
+  getAvatarUploadUrl(
+    filename: String!
+    contentType: String!
+    folder: String!
+  ): SignedUrlPayload!
+  updateAvatarIcon(
+    avatarId: ID!
+    iconUrl: String!
+    iconStoragePath: String!
+  ): Avatar!
+}
+
+type Avatar {
+  avatarId: ID!
+  userId: ID!
+  avatarName: String!
+  iconUrl: String!
+  iconStoragePath: String!
+  bio: String!
+  link: String!
+  createdAt: String!
+  updatedAt: String!
+}
