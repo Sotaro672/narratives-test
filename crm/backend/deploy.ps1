@@ -1,7 +1,7 @@
 # PowerShell deployment script for Cloud Run
 
 # Set variables
-$PROJECT_ID = "narratives-crm"
+$PROJECT_ID = "narratives-test-64976"
 $SERVICE_NAME = "narratives-crm"
 $REGION = "us-central1"
 $IMAGE_NAME = "gcr.io/$PROJECT_ID/$SERVICE_NAME"
@@ -9,8 +9,8 @@ $IMAGE_NAME = "gcr.io/$PROJECT_ID/$SERVICE_NAME"
 Write-Host "Starting deployment to Cloud Run..." -ForegroundColor Green
 
 # Check if service account file exists
-if (-not (Test-Path -Path ".\narratives-crm-service_account.json" -PathType Leaf)) {
-    Write-Host "Error: Service account file 'narratives-crm-service_account.json' not found in the current directory!" -ForegroundColor Red
+if (-not (Test-Path -Path ".\narratives-test-service_account.json" -PathType Leaf)) {
+    Write-Host "Error: Service account file 'narratives-test-service_account.json' not found in the current directory!" -ForegroundColor Red
     Write-Host "Please download your service account key from Google Cloud Console and save it as 'narratives-crm-service_account.json' in the backend directory." -ForegroundColor Yellow
     Write-Host "Instructions: https://cloud.google.com/iam/docs/creating-managing-service-account-keys" -ForegroundColor Cyan
     exit 1

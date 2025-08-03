@@ -19,7 +19,7 @@
     "dev:crm:frontend": "cd crm/frontend && npm run dev",
     "dev:crm:backend": "cd crm/backend && go run main.go",
     "dev:sns:backend": "cd sns/backend && go run main.go",
-    "deploy:crm": "cd crm && firebase deploy --only hosting:crm,functions",
+    "deploy:crm": "firebase deploy --only hosting:crm,functions",
     "deploy:sns": "firebase deploy --only hosting:sns",
     "lint:crm": "cd crm/frontend && npm run lint",
     "test:crm": "cd crm/frontend && npm run test",

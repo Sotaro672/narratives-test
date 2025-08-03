@@ -1,20 +1,13 @@
 {
   "projects": {
-    "default": "narratives-test"
+    "default": "narratives-test-64976"
   },
   "targets": {
-    "narratives-test": {
-      "hosting": {
-        "crm": [
-          "narratives-crm"
-        ],
-        "sns": [
-          "narratives-test-64976"
-        ]
-      }
-    },
     "narratives-test-64976": {
       "hosting": {
+        "crm": [
+          "narratives-crm-site"
+        ],
         "sns": [
           "narratives-test-64976"
         ]
