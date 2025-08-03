@@ -6,13 +6,19 @@
   "functions": {
     "source": "crm/functions",
     "runtime": "nodejs18",
-    "predeploy": ["npm --prefix crm/functions run build"]
+    "predeploy": [
+      "npm --prefix crm/functions run build"
+    ]
   },
   "hosting": [
     {
       "target": "crm",
       "public": "crm/frontend/dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
       "rewrites": [
         {
           "source": "**",
@@ -34,7 +40,11 @@
     {
       "target": "sns",
       "public": "sns/flutter_app/build/web",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
       "rewrites": [
         {
           "source": "**",
@@ -66,5 +76,7 @@
   "storage": {
     "rules": "storage.rules"
   },
-  "extensions": {}
+  "extensions": {
+    "firestore-send-email": "firebase/firestore-send-email@0.2.4"
+  }
 }

@@ -91,5 +91,22 @@ service cloud.firestore {
       );
       allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
     }
+    
+    // メール送信コレクション（Trigger Email from Firestore用）
+    match /mail/{mailId} {
+      // CRMアクセス権限があるユーザーはメール送信可能
+      allow read, write, create: if request.auth != null && hasCrmAccess();
+      // 一般ユーザーは自分のメールのみ操作可能
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+    }
+    
+    // メールテンプレートとユーザー情報（mails コレクション用）
+    match /mails/{docId} {
+      // CRMアクセス権限があるユーザーは全てのメール関連データにアクセス可能
+      allow read, write, create: if request.auth != null && hasCrmAccess();
+      // 一般ユーザーは自分の情報のみアクセス可能
+      allow read, write: if request.auth != null && request.auth.uid == docId;
+    }
   }
 }

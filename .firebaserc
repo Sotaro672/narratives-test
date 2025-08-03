@@ -15,5 +15,11 @@
       }
     }
   },
-  "etags": {}
+  "etags": {
+    "narratives-test-64976": {
+      "extensionInstances": {
+        "firestore-send-email": "0b877740dd8eda3809fe08ef1037895a9fc55f7f0cc4a864039ab90d9ebacedd"
+      }
+    }
+  }
 }
