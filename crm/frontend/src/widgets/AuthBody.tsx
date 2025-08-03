@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { BusinessUserModel } from '../models/BusinessUsers';
-import { createUserAccount, loginUser } from '../services/authService';
+import type { UnifiedUserModel } from '../models/UnifiedUser';
+import { createUnifiedUserAccount, signInUnifiedUser } from '../services/unifiedAuthService';
 import './AuthBody.css';
 
 interface AuthBodyProps {
-  onAuthSuccess: (user?: BusinessUserModel) => void;
+  onAuthSuccess: (user?: BusinessUserModel | UnifiedUserModel) => void;
   onCancel: () => void;
   initialMode?: 'signin' | 'login';
 }
@@ -59,30 +60,78 @@ const AuthBody: React.FC<AuthBodyProps> = ({ onAuthSuccess, onCancel, initialMod
 
     try {
       if (isLogin) {
-        // ログインの場合
-        const result = await loginUser(formData.email, formData.password);
+        // ログインの場合（統合認証）
+        const result = await signInUnifiedUser(formData.email, formData.password);
         
         if (result.success && result.user) {
-          console.log('Login successful:', result.user.getFullName());
-          onAuthSuccess(result.user);
+          // CRMアクセス権限をチェック
+          if (!result.user.permissions.crm) {
+            alert('CRMへのアクセス権限がありません');
+            return;
+          }
+
+          console.log('Login successful:', result.user.email);
+          
+          // BusinessUserModelとして互換性を保つ
+          if (result.user.crmProfile) {
+            const businessUser = new BusinessUserModel({
+              userId: result.user.userId,
+              firstName: result.user.crmProfile.firstName,
+              firstNameKatakana: result.user.crmProfile.firstNameKatakana,
+              lastName: result.user.crmProfile.lastName,
+              lastNameKatakana: result.user.crmProfile.lastNameKatakana,
+              emailAddress: result.user.email,
+              emailVerified: result.user.crmProfile.emailVerified,
+              role: result.user.crmProfile.role,
+              status: result.user.crmProfile.status,
+              belongTo: result.user.crmProfile.belongTo,
+              createdAt: result.user.createdAt,
+              updatedAt: result.user.updatedAt
+            });
+            onAuthSuccess(businessUser);
+          } else {
+            onAuthSuccess(result.user);
+          }
         } else {
           alert(result.error || 'ログインに失敗しました');
         }
       } else {
         // サインインの場合（新規ユーザー作成）
-        const result = await createUserAccount({
+        const result = await createUnifiedUserAccount({
           email: formData.email,
           password: formData.password,
           firstName: formData.firstName,
           firstNameKatakana: formData.firstNameKatakana,
           lastName: formData.lastName,
           lastNameKatakana: formData.lastNameKatakana,
-          role: formData.role
+          role: formData.role,
+          enableCrm: true,  // CRMアクセス有効
+          enableSns: false  // SNSアクセスは無効（必要に応じて後で有効化）
         });
         
         if (result.success && result.user) {
-          console.log('Sign in successful:', result.user.getFullName());
-          onAuthSuccess(result.user);
+          console.log('Sign in successful:', result.user.email);
+          
+          // BusinessUserModelとして互換性を保つ
+          if (result.user.crmProfile) {
+            const businessUser = new BusinessUserModel({
+              userId: result.user.userId,
+              firstName: result.user.crmProfile.firstName,
+              firstNameKatakana: result.user.crmProfile.firstNameKatakana,
+              lastName: result.user.crmProfile.lastName,
+              lastNameKatakana: result.user.crmProfile.lastNameKatakana,
+              emailAddress: result.user.email,
+              emailVerified: result.user.crmProfile.emailVerified,
+              role: result.user.crmProfile.role,
+              status: result.user.crmProfile.status,
+              belongTo: result.user.crmProfile.belongTo,
+              createdAt: result.user.createdAt,
+              updatedAt: result.user.updatedAt
+            });
+            onAuthSuccess(businessUser);
+          } else {
+            onAuthSuccess(result.user);
+          }
         } else {
           alert(result.error || 'アカウント作成に失敗しました');
         }
