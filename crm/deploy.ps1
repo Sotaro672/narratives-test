@@ -1,5 +1,5 @@
 # Configuration
-$PROJECT_ID = "narratives-test-64976"
+$PROJECT_ID = "narratives-crm"
 $SERVICE_NAME = "narratives-crm"
 $REGION = "us-central1"
 $IMAGE_NAME = "gcr.io/$PROJECT_ID/narratives-crm-backend"
@@ -25,7 +25,7 @@ gcloud run deploy $SERVICE_NAME `
   --cpu 1 `
   --max-instances 100 `
   --timeout 300 `
-  --set-env-vars="GO_ENV=production,GOOGLE_CLOUD_PROJECT=narratives-test-64976,GOOGLE_APPLICATION_CREDENTIALS=./narratives-test-service_account.json,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=caotailangaogang@gmail.com,SMTP_PASSWORD=dmkpcyrzmfavisnz,FROM_EMAIL=caotailangaogang@gmail.com,FROM_NAME=Narratives CRM System,FRONTEND_URL=http://localhost:5173"
+  --set-env-vars="GO_ENV=production,GOOGLE_CLOUD_PROJECT=narratives-crm,GOOGLE_APPLICATION_CREDENTIALS=./narratives-crm-service_account.json,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=caotailangaogang@gmail.com,SMTP_PASSWORD=dmkpcyrzmfavisnz,FROM_EMAIL=caotailangaogang@gmail.com,FROM_NAME=Narratives CRM System,FRONTEND_URL=https://narratives-crm-site.web.app"
 
 Write-Host "✅ Deployment completed!" -ForegroundColor Green
 Write-Host "🔗 Service URL:" -ForegroundColor Cyan

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set variables  
-PROJECT_ID="narratives-test-64976"
+PROJECT_ID="narratives-crm"
 SERVICE_NAME="narratives-crm"n/bash
 
 # Set variables
@@ -38,7 +38,7 @@ gcloud run deploy $SERVICE_NAME \
   --memory 512Mi \
   --cpu 1 \
   --max-instances 100 \
-  --set-env-vars="PORT=8080,GO_ENV=production,GOOGLE_CLOUD_PROJECT=narratives-test-64976"
+  --set-env-vars="PORT=8080,GO_ENV=production,GOOGLE_CLOUD_PROJECT=narratives-crm"
 
 echo "Deployment completed!"
 echo "Service URL: $(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)')"
