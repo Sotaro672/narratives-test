@@ -23,3 +23,7 @@ export const db = getFirestore(app);
 // 後方互換性のためのエクスポート
 export const crmAuth = auth;
 export const crmDb = db;
+
+// SNS側の認証は別途設定が必要（現在はCRMの認証を使用）
+export const snsAuth = auth; // 一時的にCRMの認証を使用
+export const snsDb = db; // 一時的にCRMのDBを使用
