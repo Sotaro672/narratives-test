@@ -1,0 +1,20 @@
+# 実行可能ファイルとビルド済みバイナリを除外
+*.exe
+narratives-sns-backend
+server-local.exe
+server.exe
+main.exe
+
+# その他の不要なファイル
+.env
+*.log
+.DS_Store
+Thumbs.db
+
+# Gitファイル
+.git
+.gitignore
+
+# 開発用ファイル
+*.tmp
+*.temp

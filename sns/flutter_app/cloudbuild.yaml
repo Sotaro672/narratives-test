@@ -1,0 +1,19 @@
+steps:
+- name: 'ghcr.io/cirruslabs/flutter:latest'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    flutter pub get
+    flutter build web --release
+    ls -la build/web/
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    cp -r build/web ./firebase-deploy
+    cd firebase-deploy
+    echo '{"hosting":{"public":".","rewrites":[{"source":"**","destination":"/index.html"}]}}' > firebase.json
+    echo '{"projects":{"default":"narratives-test-64976"}}' > .firebaserc
+    firebase deploy --only hosting

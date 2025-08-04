@@ -5,16 +5,13 @@ import { AuthenticationEmailService } from '../services/authenticationEmailServi
 import './Customer.css';
 
 // SNS Backend API エンドポイント（新しいCloud Runサービス）
-const SNS_API_BASE_URL = 'https://narratives-test-221090465383.asia-northeast1.run.app';
+const SNS_API_BASE_URL = 'https://narratives-sns-api-221090465383.us-central1.run.app';
 
 // Development proxy endpoint (for local testing only)
 const isDevelopment = import.meta.env.DEV;
 
-// Production: SNS Backend GraphQL endpoint
-const PRODUCTION_API_BASE_URL = `${SNS_API_BASE_URL}/query`;
-
-// 開発環境でもプロダクションエンドポイントを使用（CORSが許可されているため）
-const API_BASE_URL = PRODUCTION_API_BASE_URL;
+// Production: SNS Backend base URL (GraphQL endpoint is at /query)
+const API_BASE_URL = SNS_API_BASE_URL;
 
 // GraphQL スキーマ調査用クエリ
 const INTROSPECTION_QUERY = `
@@ -354,11 +351,11 @@ const Customer: React.FC = () => {
       // 1. まずOPTIONSリクエスト（preflight）を手動で送信してCORSヘッダーを確認
       console.log('1. Testing CORS preflight (OPTIONS request)...');
       try {
-        const preflightResponse = await fetch(`${API_BASE_URL}/api/users`, {
+        const preflightResponse = await fetch(`${API_BASE_URL}/query`, {
           method: 'OPTIONS',
           headers: {
             'Origin': window.location.origin,
-            'Access-Control-Request-Method': 'GET',
+            'Access-Control-Request-Method': 'POST',
             'Access-Control-Request-Headers': 'Authorization, Content-Type',
           },
         });
@@ -411,17 +408,20 @@ const Customer: React.FC = () => {
         console.error('Health error message:', healthError instanceof Error ? healthError.message : String(healthError));
       }
       
-      // 3. SNS認証トークンでAPIテスト
-      console.log('3. Testing authenticated API request with SNS token...');
+      // 3. SNS認証トークンでGraphQL APIテスト
+      console.log('3. Testing authenticated GraphQL API request with SNS token...');
       const snsIdToken = await snsAuthUser.getIdToken();
       console.log('Got SNS ID token, length:', snsIdToken.length);
       
-      const response = await fetch(`${API_BASE_URL}/api/users`, {
-        method: 'GET',
+      const response = await fetch(`${API_BASE_URL}/query`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${snsIdToken}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ 
+          query: '{ __schema { queryType { name } } }' 
+        })
       });
       
       console.log('API response status:', response.status);
@@ -495,13 +495,26 @@ const Customer: React.FC = () => {
           field.toLowerCase().includes('account')
         );
         
-        if (userRelatedFields.length > 0) {
-          console.log('🔍 Found potential user-related fields:', userRelatedFields);
-          alert(`"users"フィールドが見つかりません。\n\n利用可能なフィールド: ${availableFields.join(', ')}\n\nユーザー関連フィールド: ${userRelatedFields.join(', ')}\n\nコンソールで詳細を確認してください。`);
-        } else {
-          alert(`GraphQLスキーマに"users"フィールドが存在しません。\n\n利用可能なフィールド: ${availableFields.join(', ')}\n\nAPI開発者に正しいフィールド名を確認してください。`);
-        }
+        // 利用可能なフィールドの詳細を表示
+        console.log('📋 Current GraphQL schema analysis:');
+        console.log('- Available fields:', availableFields);
+        console.log('- User-related fields:', userRelatedFields);
+        console.log('- Schema type: Avatar management API (not user management)');
         
+        // ユーザーに適切なメッセージを表示
+        const schemaInfo = `現在のSNS APIはアバター管理専用です。
+
+利用可能なフィールド:
+${availableFields.map((field: string) => `• ${field}`).join('\n')}
+
+このAPIはユーザー管理機能を提供していません。
+ユーザー情報を管理するには、適切なユーザー管理APIが必要です。`;
+        
+        alert(schemaInfo);
+        
+        // 空の顧客リストを設定（エラーではなく、単にデータが無いことを示す）
+        setCustomers([]);
+        console.log('ℹ️ Set empty customer list due to schema limitations');
         return;
       }
       
@@ -589,9 +602,12 @@ const Customer: React.FC = () => {
   return (
     <div className="customer-container">
       <div className="customer-header">
-        <h2>SNSユーザー管理システム</h2>
-        <p>業務ユーザーとしてログインし、narratives-test API ({SNS_API_BASE_URL}) からSNSユーザー情報を収集・管理できます</p>
-        <p>🔸 narratives-crm: 業務ユーザー用認証 | 🔸 narratives-test: SNS情報収集専用</p>
+        <h2>SNS API管理システム</h2>
+        <p>業務ユーザーとしてログインし、narratives-test API ({SNS_API_BASE_URL}) へ接続できます</p>
+        <p>🔸 narratives-crm: 業務ユーザー用認証 | 🔸 narratives-test: アバター管理API</p>
+        <div style={{ padding: '10px', backgroundColor: '#fff3cd', borderRadius: '5px', marginTop: '10px', fontSize: '14px' }}>
+          <strong>📋 現在の状況:</strong> SNS APIはアバター管理専用です。ユーザー管理機能は実装されていません。
+        </div>
       </div>
 
       {authLoading ? (
@@ -701,7 +717,11 @@ const Customer: React.FC = () => {
               <>
                 {customers.length === 0 ? (
                   <div className="no-customers">
-                    <p>narratives-test APIのusersテーブルに登録されているユーザーがいません</p>
+                    <p>📋 現在のSNS APIはアバター管理専用のため、ユーザー情報を提供していません</p>
+                    <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
+                      ユーザー管理機能を使用するには、ユーザーデータを含むAPIエンドポイントが必要です。<br/>
+                      利用可能な機能: アバター管理、ファイルアップロード
+                    </p>
                   </div>
                 ) : (
                   <div className="customers-table-container">

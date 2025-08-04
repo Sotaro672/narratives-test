@@ -1,6 +1,36 @@
 type Query {
   _empty: String
   getAvatarPublicUrl(filename: String!): String!
+  # ユーザー管理クエリ
+  users: [User!]!
+  user(id: ID!): User
+  wallets: [Wallet!]!
+  wallet(id: ID!): Wallet
+}
+
+# ユーザー情報型
+type User {
+  user_id: ID!
+  first_name: String
+  last_name: String
+  first_name_katakana: String
+  last_name_katakana: String
+  email_address: String
+  role: String
+  created_at: String
+  updated_at: String
+  wallet: Wallet
+}
+
+# ウォレット情報型
+type Wallet {
+  id: ID!
+  user_id: ID
+  wallet_address: String
+  balance: Float
+  created_at: String
+  updated_at: String
+  user: User
 }
 
 type SignedUrlPayload {

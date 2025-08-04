@@ -24,3 +24,26 @@ type SignedURLPayload struct {
 	SignedURL string `json:"signedUrl"`
 	PublicURL string `json:"publicUrl"`
 }
+
+type User struct {
+	UserID            string  `json:"user_id"`
+	FirstName         *string `json:"first_name,omitempty"`
+	LastName          *string `json:"last_name,omitempty"`
+	FirstNameKatakana *string `json:"first_name_katakana,omitempty"`
+	LastNameKatakana  *string `json:"last_name_katakana,omitempty"`
+	EmailAddress      *string `json:"email_address,omitempty"`
+	Role              *string `json:"role,omitempty"`
+	CreatedAt         *string `json:"created_at,omitempty"`
+	UpdatedAt         *string `json:"updated_at,omitempty"`
+	Wallet            *Wallet `json:"wallet,omitempty"`
+}
+
+type Wallet struct {
+	ID            string   `json:"id"`
+	UserID        *string  `json:"user_id,omitempty"`
+	WalletAddress *string  `json:"wallet_address,omitempty"`
+	Balance       *float64 `json:"balance,omitempty"`
+	CreatedAt     *string  `json:"created_at,omitempty"`
+	UpdatedAt     *string  `json:"updated_at,omitempty"`
+	User          *User    `json:"user,omitempty"`
+}

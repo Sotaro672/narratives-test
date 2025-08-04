@@ -186,11 +186,23 @@ await sendEmailVerification(user);
 1. **メール未送信**: Firestore mailコレクションの確認
 2. **CORS エラー**: ブラウザキャッシュのクリア
 3. **認証失敗**: Firebase Consoleでユーザー状態確認
+4. **Cloud Build エラー**: `$SHORT_SHA`変数が空の場合、`latest`タグを使用
+5. **プロジェクトID変数エラー**: `$PROJECT_ID`が解決されない場合、明示的にプロジェクトIDを指定
 
 ### デバッグ方法
 1. **ブラウザ開発者ツール**: ネットワークタブでAPI呼び出し確認
 2. **Firebase Console**: Authentication/Firestoreのログ確認
 3. **Cloud Run ログ**: Google Cloud Consoleでサーバーログ確認
+4. **Cloud Build ログ**: Google Cloud Console > Cloud Build でビルドログ確認
+
+### Cloud Build修正例
+```yaml
+# エラー発生: $SHORT_SHAが空、$PROJECT_IDが解決されない
+args: ['build', '-t', 'gcr.io/$PROJECT_ID/service:$SHORT_SHA', '.']
+
+# 修正版: 明示的なプロジェクトIDとlatestタグを使用
+args: ['build', '-t', 'gcr.io/narratives-test-64976/service:latest', '.']
+```
 
 ---
 
@@ -208,5 +220,5 @@ await sendEmailVerification(user);
 ---
 
 **作成日**: 2025年8月4日  
-**最終更新**: デプロイ完了後に更新予定  
-**ステータス**: 🟡 展開中 (SNS Backend デプロイ中)
+**最終更新**: 16:53 JST - Cloud Build エラー修正、SNS Backend デプロイ再実行中  
+**ステータス**: 🟡 展開中 (SNS Backend デプロイ中 - $SHORT_SHA エラー修正済み)

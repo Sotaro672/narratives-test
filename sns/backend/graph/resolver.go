@@ -18,3 +18,12 @@ type Config struct {
 type Resolver struct {
 	Config Config
 }
+
+// Helper functions for pointer conversions
+func stringPtr(s string) *string {
+	return &s
+}
+
+func floatPtr(f float64) *float64 {
+	return &f
+}
