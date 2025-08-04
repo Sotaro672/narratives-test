@@ -12,7 +12,7 @@ steps:
     args:
     - 'run'
     - 'deploy'
-    - 'narratives-sns-backend'
+    - 'narratives-api-765852113927'
     - '--image'
     - 'gcr.io/$PROJECT_ID/narratives-sns-backend:$SHORT_SHA'
     - '--region'
