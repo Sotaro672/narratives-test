@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { snsAuth, crmAuth } from '../config/firebase';
 import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { AuthenticationEmailService } from '../services/authenticationEmailService';
 import './Customer.css';
 
 // SNS Backend API エンドポイント（新しいCloud Runサービス）
@@ -189,6 +190,31 @@ const Customer: React.FC = () => {
       const result = await signInWithEmailAndPassword(crmAuth, loginEmail, loginPassword);
       console.log('CRM user sign in successful:', result.user.email);
       
+      // メール認証が必要かチェック
+      if (AuthenticationEmailService.requiresEmailVerification(result.user)) {
+        console.log('Email verification required for user:', result.user.email);
+        
+        try {
+          // 認証メールを送信
+          await AuthenticationEmailService.sendAuthenticationEmail(result.user, false);
+          
+          // ユーザーに認証メール送信を通知
+          alert(`認証メールを ${result.user.email} に送信しました。メールを確認して認証を完了してください。`);
+          
+          // 認証完了まで機能制限を表示
+          setShowLoginForm(false);
+          return;
+          
+        } catch (emailError) {
+          console.error('Failed to send authentication email:', emailError);
+          alert('認証メールの送信に失敗しました。管理者にお問い合わせください。');
+          return;
+        }
+      }
+      
+      // メール認証済みの場合、通常のログイン処理を続行
+      console.log('Email verification completed, proceeding with normal login...');
+      
       // CRM認証成功後、SNS側は匿名認証（情報収集用）
       console.log('Setting up SNS anonymous auth for data collection...');
       const snsResult = await signInAnonymously(snsAuth);
@@ -215,11 +241,31 @@ const Customer: React.FC = () => {
         case 'auth/too-many-requests':
           errorMessage = 'ログイン試行回数が多すぎます。しばらくしてから再試行してください。';
           break;
+        case 'auth/email-not-verified':
+          errorMessage = 'メールアドレスが認証されていません。認証メールを確認してください。';
+          break;
         default:
           errorMessage = `ログインエラー: ${error.message}`;
       }
       
       alert(errorMessage);
+    }
+  };
+
+  // 認証メール再送信
+  const resendAuthenticationEmail = async () => {
+    if (!crmAuthUser) {
+      alert('ログインしてから認証メールを再送信してください。');
+      return;
+    }
+
+    try {
+      console.log('Resending authentication email for user:', crmAuthUser.email);
+      await AuthenticationEmailService.resendAuthenticationEmail(crmAuthUser);
+      alert(`認証メールを ${crmAuthUser.email} に再送信しました。メールをご確認ください。`);
+    } catch (error) {
+      console.error('Failed to resend authentication email:', error);
+      alert('認証メールの再送信に失敗しました。管理者にお問い合わせください。');
     }
   };
 
@@ -606,6 +652,29 @@ const Customer: React.FC = () => {
           <div className="user-info" style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px' }}>
             <p><strong>業務ユーザー:</strong> {crmAuthUser ? `✅ ${crmAuthUser.email || crmAuthUser.uid}` : '❌ 未認証'}</p>
             <p><strong>SNS情報収集:</strong> {snsAuthUser ? `✅ 認証済み (${snsAuthUser.uid.substring(0, 8)}...)` : '❌ 未認証'}</p>
+            
+            {/* メール認証状態の表示 */}
+            {crmAuthUser && (
+              <div style={{ marginTop: '10px', padding: '10px', backgroundColor: AuthenticationEmailService.isUserEmailVerified(crmAuthUser) ? '#d4edda' : '#f8d7da', borderRadius: '5px' }}>
+                <p><strong>メール認証:</strong> {AuthenticationEmailService.isUserEmailVerified(crmAuthUser) ? '✅ 認証済み' : '⚠️ 未認証'}</p>
+                {!AuthenticationEmailService.isUserEmailVerified(crmAuthUser) && (
+                  <div style={{ marginTop: '10px' }}>
+                    <p style={{ color: '#721c24', fontSize: '14px', marginBottom: '10px' }}>
+                      ⚠️ セキュリティのため、メール認証が必要です。<br/>
+                      {crmAuthUser.email} に送信された認証メールを確認してください。
+                    </p>
+                    <button 
+                      onClick={resendAuthenticationEmail} 
+                      className="auth-btn" 
+                      style={{ backgroundColor: '#ffc107', color: '#212529', fontSize: '14px', padding: '8px 12px' }}
+                    >
+                      📧 認証メール再送信
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <button onClick={handleSignOut} className="auth-btn" style={{ marginLeft: '10px' }}>
               🚪 ログアウト
             </button>
