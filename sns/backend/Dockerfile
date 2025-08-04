@@ -1,7 +1,7 @@
-# C:\Users\caota\narratives-test\backend\Dockerfile
-FROM golang:1.24 AS builder
+# SNS Backend Dockerfile
+FROM golang:1.21 AS builder
 
-WORKDIR /backend
+WORKDIR /app
 COPY . .
 
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
@@ -11,8 +11,9 @@ RUN go build -o server .
 # 本番用の軽量イメージ
 FROM debian:bullseye-slim
 
-COPY --from=builder /backend/server /server
-COPY --from=builder /backend/narratives-test-00fc9efaa447.json /app/narratives-test-00fc9efaa447.json
+WORKDIR /app
+COPY --from=builder /app/server /app/server
+COPY --from=builder /app/narratives-test-00fc9efaa447.json /app/narratives-test-00fc9efaa447.json
 
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
@@ -25,4 +26,4 @@ ENV GCS_GOOGLE_ACCESS_ID=765852113927-compute@developer.gserviceaccount.com
 
 EXPOSE 8080
 
-ENTRYPOINT ["/server"]
+ENTRYPOINT ["/app/server"]

@@ -18,11 +18,8 @@ export class AuthenticationEmailService {
     try {
       console.log('Sending authentication email for user:', user.email);
 
-      // 1. Firebase標準の認証メール送信
-      await sendEmailVerification(user, {
-        url: `${window.location.origin}/email-verification?uid=${user.uid}&email=${encodeURIComponent(user.email || '')}`,
-        handleCodeInApp: true
-      });
+      // 1. Firebase標準の認証メール送信（シンプルな設定）
+      await sendEmailVerification(user);
 
       // 2. Trigger Email from Firestoreを使用してカスタム認証メール送信
       const emailTemplate = isInitialSignUp 
@@ -44,7 +41,7 @@ export class AuthenticationEmailService {
    * 初回サインアップ時のウェルカムメールテンプレート
    */
   private static createWelcomeEmailTemplate(user: User) {
-    const verificationUrl = `${window.location.origin}/email-verification?uid=${user.uid}&email=${encodeURIComponent(user.email || '')}`;
+    const verificationUrl = `https://narratives-crm.web.app/email-verification?uid=${user.uid}&email=${encodeURIComponent(user.email || '')}`;
     
     return {
       to: [user.email],
@@ -131,7 +128,7 @@ Narratives CRM システム
    * ログイン時の認証メールテンプレート
    */
   private static createVerificationEmailTemplate(user: User) {
-    const verificationUrl = `${window.location.origin}/email-verification?uid=${user.uid}&email=${encodeURIComponent(user.email || '')}`;
+    const verificationUrl = `https://narratives-crm.web.app/email-verification?uid=${user.uid}&email=${encodeURIComponent(user.email || '')}`;
     
     return {
       to: [user.email],

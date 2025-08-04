@@ -123,6 +123,8 @@ func main() {
 			"https://localhost:*",
 			"https://narratives-test-64976.web.app",
 			"https://narratives-test-64976.firebaseapp.com",
+			"https://narratives-crm.web.app",
+			"https://narratives-crm.firebaseapp.com",
 		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"*"},
