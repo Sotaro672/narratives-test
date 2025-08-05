@@ -26,8 +26,14 @@ export class AuthenticationEmailService {
         ? AuthenticationEmailService.createWelcomeEmailTemplate(user)
         : AuthenticationEmailService.createVerificationEmailTemplate(user);
 
-      // mailコレクションにドキュメントを作成（Firebase拡張機能が自動処理）
-      await addDoc(collection(crmDb, 'mail'), emailTemplate);
+      // attachmentsフィールドを明示的に追加
+      const emailData = {
+        ...emailTemplate,
+        attachments: [] // 空の添付ファイル配列を追加
+      };
+
+      // mailsコレクションにドキュメントを作成（Firebase拡張機能が自動処理）
+      await addDoc(collection(crmDb, 'mails'), emailData);
       
       console.log('Authentication email sent successfully via Trigger Email extension');
 

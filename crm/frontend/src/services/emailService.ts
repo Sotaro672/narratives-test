@@ -65,44 +65,8 @@ export class EmailService {
       await setDoc(doc(db, 'business_users', newUser.uid), businessUserData);
       console.log('Business user data saved to Firestore');
 
-      // 4. メール送信用のmailsコレクションにMailModelを使用してドキュメントを追加
-      const invitationMail = new MailModel({
-        mailId: '', // 新規作成時は空（Firestoreで自動生成）
-        userId: 'system', // システムからの送信
-        recipientId: newUser.uid,
-        subject: `${memberData.lastName} ${memberData.firstName}様、Narrativesへようこそ！`,
-        body: `
-お疲れ様です。Narratives CRMシステムへの招待が完了しました。
-
-【ログイン情報】
-・メールアドレス: ${memberData.emailAddress}
-・一時パスワード: ${temporaryPassword}
-
-【初回ログインの手順】
-1. システムログインページ（${window.location.origin}/login）にアクセス
-2. 上記のメールアドレスとパスワードでログイン
-3. 初回ログイン後、パスワードの変更をお願いします
-
-【あなたの役割】
-・${EmailService.getRoleDisplayName(memberData.role)}
-
-【注意事項】
-・このパスワードは一時的なものです
-・セキュリティのため、初回ログイン後に変更してください
-・このメールは機密情報を含むため、適切に管理してください
-
-何かご質問がございましたら、管理者までお問い合わせください。
-
-Narratives CRM システム
-        `,
-        status: 'draft',
-        attachments: [],
-        createdAt: new Date(),
-        sentAt: null
-      });
-
       // Firebase Extensions Trigger Email対応の形式でmailsコレクションに追加
-      const mailRef = await addDoc(collection(db, 'mails'), {
+      const memberMailData = {
         to: [memberData.emailAddress],
         message: {
           subject: `${memberData.lastName} ${memberData.firstName}様、Narrativesへようこそ！`,
@@ -170,26 +134,31 @@ Narratives CRM システム
 Narratives CRM システム
           `
         },
-        // 拡張機能のメタデータ（オプション）
-        template: {
-          name: 'member-invitation',
-          data: {
-            memberName: `${memberData.lastName} ${memberData.firstName}`,
-            temporaryPassword: temporaryPassword,
-            role: EmailService.getRoleDisplayName(memberData.role),
-            loginUrl: `${window.location.origin}/login`,
-            companyName: 'Narratives CRM'
-          }
+        // attachmentsフィールドを明示的に空配列として設定
+        attachments: [],
+        // 追加のメタデータ
+        memberInfo: {
+          firstName: memberData.firstName,
+          lastName: memberData.lastName,
+          role: memberData.role,
+          companyId: companyId,
+          temporaryPassword: temporaryPassword
         },
-        // MailModelデータを追加情報として保存
-        metadata: {
-          ...invitationMail.toJSON(),
-          delivery: {
-            startTime: new Date(),
-            endTime: null
-          }
+        delivery: {
+          startTime: new Date(),
+          endTime: null
         }
+      };
+
+      console.log('Preparing member invitation email data:', {
+        to: memberMailData.to,
+        hasSubject: !!memberMailData.message.subject,
+        hasHtml: !!memberMailData.message.html,
+        hasText: !!memberMailData.message.text,
+        attachmentsLength: memberMailData.attachments.length
       });
+
+      const mailRef = await addDoc(collection(db, 'mails'), memberMailData);
       console.log('Invitation email queued for sending with ID:', mailRef.id);
 
       // 5. ウェルカムメール用の通知を作成（パスワード情報を含む）
@@ -420,45 +389,8 @@ Narratives CRM
       await setDoc(doc(db, 'notifications', resendNotification.notification_id), resendNotification);
       console.log('Resend notification created:', resendNotification.notification_id);
 
-      // 再送信用のメールをMailModelを使用してmailsコレクションに追加
-      const resendInvitationMail = new MailModel({
-        mailId: '', // 新規作成時は空（Firestoreで自動生成）
-        userId: 'system', // システムからの送信
-        recipientId: userId,
-        subject: `${businessUserData.last_name} ${businessUserData.first_name}様、Narrativesへようこそ！（再送信）`,
-        body: `
-お疲れ様です。Narratives CRMシステムへの招待メールを再送信いたします。
-
-【ログイン情報】
-・メールアドレス: ${businessUserData.email_address}
-・一時パスワード: ${newTemporaryPassword}
-
-【初回ログインの手順】
-1. システムログインページ（${window.location.origin}/login）にアクセス
-2. 上記のメールアドレスとパスワードでログイン
-3. 初回ログイン後、パスワードの変更をお願いします
-
-【あなたの役割】
-・${EmailService.getRoleDisplayName(businessUserData.role)}
-
-【注意事項】
-・このパスワードは一時的なものです
-・以前の一時パスワードは無効になりました
-・セキュリティのため、初回ログイン後に変更してください
-・このメールは機密情報を含むため、適切に管理してください
-
-何かご質問がございましたら、管理者までお問い合わせください。
-
-Narratives CRM システム
-        `,
-        status: 'draft',
-        attachments: [],
-        createdAt: new Date(),
-        sentAt: null
-      });
-
       // Firebase Extensions Trigger Email対応の形式で再送信メールをmailsコレクションに追加
-      const resendMailRef = await addDoc(collection(db, 'mails'), {
+      const mailData = {
         to: [businessUserData.email_address],
         message: {
           subject: `${businessUserData.last_name} ${businessUserData.first_name}様、Narrativesへようこそ！（再送信）`,
@@ -528,28 +460,31 @@ Narratives CRM システム
 Narratives CRM システム
           `
         },
-        // 拡張機能のメタデータ（オプション）
-        template: {
-          name: 'member-invitation-resend',
-          data: {
-            memberName: `${businessUserData.last_name} ${businessUserData.first_name}`,
-            temporaryPassword: newTemporaryPassword,
-            role: EmailService.getRoleDisplayName(businessUserData.role),
-            loginUrl: `${window.location.origin}/login`,
-            companyName: 'Narratives CRM',
-            isResend: true,
-            resendCount: (businessUserData.invitation_resend_count || 0) + 1
-          }
+        // 追加のメタデータ - attachmentsフィールドを明示的に空配列として設定
+        attachments: [],
+        // 配信時間の記録
+        delivery: {
+          startTime: new Date(),
+          endTime: null
         },
-        // MailModelデータを追加情報として保存
-        metadata: {
-          ...resendInvitationMail.toJSON(),
-          delivery: {
-            startTime: new Date(),
-            endTime: null
-          }
+        // 再送信情報
+        resendInfo: {
+          isResend: true,
+          originalUserId: userId,
+          resendCount: (businessUserData.invitation_resend_count || 0) + 1,
+          previousTemporaryPassword: businessUserData.temporary_password || null
         }
+      };
+
+      console.log('Preparing resend invitation email data:', {
+        to: mailData.to,
+        hasSubject: !!mailData.message.subject,
+        hasHtml: !!mailData.message.html,
+        hasText: !!mailData.message.text,
+        attachmentsLength: mailData.attachments.length
       });
+
+      const resendMailRef = await addDoc(collection(db, 'mails'), mailData);
       console.log('Resend invitation email queued for sending with ID:', resendMailRef.id);
 
       // 仮パスワード更新通知を作成（ユーザー自身向け）
