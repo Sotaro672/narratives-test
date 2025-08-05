@@ -293,9 +293,13 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
       
       // ユーザーのbelongToフィールドを更新
       const userDocRef = doc(crmDb, 'users', currentUser.userId);
+      const businessUserDocRef = doc(crmDb, 'business_users', currentUser.userId);
+      
       console.log('Getting user document...');
       const userDoc = await getDoc(userDocRef);
+      const businessUserDoc = await getDoc(businessUserDocRef);
       
+      // usersコレクションを更新
       if (userDoc.exists()) {
         const userData = userDoc.data();
         console.log('Current user data:', userData);
@@ -330,7 +334,45 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
           }
         }
       } else {
-        console.error('User document does not exist');
+        console.error('User document does not exist in users collection');
+      }
+      
+      // business_usersコレクションも更新
+      if (businessUserDoc.exists()) {
+        const businessUserData = businessUserDoc.data();
+        console.log('Current business user data:', businessUserData);
+        const currentBelongTo = businessUserData.belong_to || [];
+        const currentRole = businessUserData.role || 'user';
+        
+        // 新しい会社IDを追加（重複チェック）
+        if (!currentBelongTo.includes(docRef.id)) {
+          const updatedBelongTo = [...currentBelongTo, docRef.id];
+          
+          // 会社作成者をrootロールに昇格
+          const newRole = 'root';
+          
+          console.log('Updating business user - belongTo:', updatedBelongTo, 'role:', currentRole, '->', newRole);
+          await updateDoc(businessUserDocRef, {
+            belong_to: updatedBelongTo,
+            role: newRole,
+            updated_at: new Date()
+          });
+          
+          console.log('Business user belongTo and role updated successfully');
+        } else {
+          console.log('Company ID already exists in business user belongTo');
+          
+          // 会社IDが既に存在していても、ロールはrootに更新
+          if (currentRole !== 'root') {
+            console.log('Updating business user role to root');
+            await updateDoc(businessUserDocRef, {
+              role: 'root',
+              updated_at: new Date()
+            });
+          }
+        }
+      } else {
+        console.error('Business user document does not exist');
       }
       
       // 会社作成後にSolanaウォレットを自動作成
@@ -365,20 +407,23 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
       console.log('Company data:', company.toJson());
       alert(`🎉 会社「${company.companyName}」が正常に作成されました！\n\n✅ Solanaウォレットが開設されました\n✅ あなたのロールがルートブランド管理者に昇格されました\n✅ 所属会社に追加されました`);
       
-      // 親コンポーネントに会社作成完了を通知
+      // 親コンポーネントに会社作成完了を通知（ユーザー情報の更新をトリガー）
       if (onCompanyCreated) {
         onCompanyCreated();
       }
       
-      // 会社情報を再取得
-      await fetchCurrentCompanyInfo();
-      
-      // フォームをリセットして非表示にする
-      setShowCreateForm(false);
-      setCompanyData({
-        companyName: '',
-        companyNameKatakana: '',
-      });
+      // 少し待機してからUI状態を更新
+      setTimeout(async () => {
+        // 会社情報を再取得
+        await fetchCurrentCompanyInfo();
+        
+        // フォームをリセットして非表示にする
+        setShowCreateForm(false);
+        setCompanyData({
+          companyName: '',
+          companyNameKatakana: '',
+        });
+      }, 1000); // 1秒待機してからUI更新
     } catch (error) {
       console.error('Company creation error:', error);
       alert('会社の作成に失敗しました: ' + (error as Error).message);

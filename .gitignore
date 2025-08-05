@@ -58,6 +58,12 @@ backend/go.mod
 backend/go.sum
 backend/*.exe
 backend/main.exe
+
+# Flutter SDK (should not be in project)
+sns/backend/flutter/
+**/flutter/dev/
+**/flutter/bin/
+**/flutter/.git/
 backend/server.exe
 backend/server-local.exe
 
