@@ -1,6 +1,9 @@
 {
+  "projects": {
+    "default": "narratives-test-64976"
+  },
   "hosting": {
-    "site": "narratives-crm",
+    "site": "narratives-crm-site",
     "public": "dist",
     "ignore": [
       "firebase.json",

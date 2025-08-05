@@ -10,52 +10,9 @@ import (
 	"time"
 )
 
-type Customer struct {
-	ID           string         `json:"id"`
-	Name         string         `json:"name"`
-	Email        string         `json:"email"`
-	Phone        *string        `json:"phone,omitempty"`
-	Company      *string        `json:"company,omitempty"`
-	Address      *string        `json:"address,omitempty"`
-	Status       CustomerStatus `json:"status"`
-	CreatedAt    time.Time      `json:"createdAt"`
-	UpdatedAt    time.Time      `json:"updatedAt"`
-	Orders       []*Order       `json:"orders"`
-	Interactions []*Interaction `json:"interactions"`
-}
-
-type CustomerConnection struct {
-	Customers []*Customer `json:"customers"`
-	PageInfo  *PageInfo   `json:"pageInfo"`
-}
-
-type CustomerInput struct {
-	Name    string          `json:"name"`
-	Email   string          `json:"email"`
-	Phone   *string         `json:"phone,omitempty"`
-	Company *string         `json:"company,omitempty"`
-	Address *string         `json:"address,omitempty"`
-	Status  *CustomerStatus `json:"status,omitempty"`
-}
-
-type CustomerStats struct {
-	TotalCustomers        int     `json:"totalCustomers"`
-	ActiveCustomers       int     `json:"activeCustomers"`
-	NewCustomersThisMonth int     `json:"newCustomersThisMonth"`
-	CustomerGrowthRate    float64 `json:"customerGrowthRate"`
-}
-
-type CustomerUpdateInput struct {
-	Name    *string         `json:"name,omitempty"`
-	Email   *string         `json:"email,omitempty"`
-	Phone   *string         `json:"phone,omitempty"`
-	Company *string         `json:"company,omitempty"`
-	Address *string         `json:"address,omitempty"`
-	Status  *CustomerStatus `json:"status,omitempty"`
-}
-
 type DashboardData struct {
-	CustomerStats        *CustomerStats `json:"customerStats"`
+	UserStats            *UserStats     `json:"userStats"`
+	WalletStats          *WalletStats   `json:"walletStats"`
 	OrderStats           *OrderStats    `json:"orderStats"`
 	RecentOrders         []*Order       `json:"recentOrders"`
 	UpcomingInteractions []*Interaction `json:"upcomingInteractions"`
@@ -63,7 +20,7 @@ type DashboardData struct {
 
 type Interaction struct {
 	ID          string             `json:"id"`
-	CustomerID  string             `json:"customerID"`
+	UserID      string             `json:"user_id"`
 	Type        InteractionType    `json:"type"`
 	Subject     string             `json:"subject"`
 	Content     string             `json:"content"`
@@ -74,11 +31,11 @@ type Interaction struct {
 	CompletedAt *time.Time         `json:"completedAt,omitempty"`
 	CreatedAt   time.Time          `json:"createdAt"`
 	UpdatedAt   time.Time          `json:"updatedAt"`
-	Customer    *Customer          `json:"customer"`
+	User        *User              `json:"user"`
 }
 
 type InteractionInput struct {
-	CustomerID  string             `json:"customerID"`
+	UserID      string             `json:"user_id"`
 	Type        InteractionType    `json:"type"`
 	Subject     string             `json:"subject"`
 	Content     string             `json:"content"`
@@ -89,7 +46,7 @@ type InteractionInput struct {
 
 type Order struct {
 	ID           string       `json:"id"`
-	CustomerID   string       `json:"customerID"`
+	UserID       string       `json:"user_id"`
 	OrderNumber  string       `json:"orderNumber"`
 	Status       OrderStatus  `json:"status"`
 	TotalAmount  float64      `json:"totalAmount"`
@@ -99,7 +56,7 @@ type Order struct {
 	Notes        *string      `json:"notes,omitempty"`
 	CreatedAt    time.Time    `json:"createdAt"`
 	UpdatedAt    time.Time    `json:"updatedAt"`
-	Customer     *Customer    `json:"customer"`
+	User         *User        `json:"user"`
 	Items        []*OrderItem `json:"items"`
 }
 
@@ -109,7 +66,7 @@ type OrderConnection struct {
 }
 
 type OrderInput struct {
-	CustomerID   string            `json:"customerID"`
+	UserID       string            `json:"user_id"`
 	OrderNumber  string            `json:"orderNumber"`
 	TotalAmount  float64           `json:"totalAmount"`
 	Currency     string            `json:"currency"`
@@ -174,63 +131,90 @@ type UploadURL struct {
 	ContentType string `json:"contentType"`
 }
 
-type CustomerStatus string
-
-const (
-	CustomerStatusActive   CustomerStatus = "ACTIVE"
-	CustomerStatusInactive CustomerStatus = "INACTIVE"
-	CustomerStatusProspect CustomerStatus = "PROSPECT"
-	CustomerStatusArchived CustomerStatus = "ARCHIVED"
-)
-
-var AllCustomerStatus = []CustomerStatus{
-	CustomerStatusActive,
-	CustomerStatusInactive,
-	CustomerStatusProspect,
-	CustomerStatusArchived,
+type User struct {
+	UserID            string     `json:"user_id"`
+	FirstName         string     `json:"first_name"`
+	LastName          string     `json:"last_name"`
+	FirstNameKatakana string     `json:"first_name_katakana"`
+	LastNameKatakana  string     `json:"last_name_katakana"`
+	EmailAddress      string     `json:"email_address"`
+	Role              UserRole   `json:"role"`
+	Balance           float64    `json:"balance"`
+	Status            UserStatus `json:"status"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	Wallets           []*Wallet  `json:"wallets"`
 }
 
-func (e CustomerStatus) IsValid() bool {
-	switch e {
-	case CustomerStatusActive, CustomerStatusInactive, CustomerStatusProspect, CustomerStatusArchived:
-		return true
-	}
-	return false
+type UserConnection struct {
+	Users    []*User   `json:"users"`
+	PageInfo *PageInfo `json:"pageInfo"`
 }
 
-func (e CustomerStatus) String() string {
-	return string(e)
+type UserInput struct {
+	FirstName         string      `json:"first_name"`
+	LastName          string      `json:"last_name"`
+	FirstNameKatakana string      `json:"first_name_katakana"`
+	LastNameKatakana  string      `json:"last_name_katakana"`
+	EmailAddress      string      `json:"email_address"`
+	Role              *UserRole   `json:"role,omitempty"`
+	Balance           *float64    `json:"balance,omitempty"`
+	Status            *UserStatus `json:"status,omitempty"`
 }
 
-func (e *CustomerStatus) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = CustomerStatus(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid CustomerStatus", str)
-	}
-	return nil
+type UserStats struct {
+	TotalUsers        int     `json:"totalUsers"`
+	ActiveUsers       int     `json:"activeUsers"`
+	NewUsersThisMonth int     `json:"newUsersThisMonth"`
+	UserGrowthRate    float64 `json:"userGrowthRate"`
 }
 
-func (e CustomerStatus) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
+type UserUpdateInput struct {
+	FirstName         *string     `json:"first_name,omitempty"`
+	LastName          *string     `json:"last_name,omitempty"`
+	FirstNameKatakana *string     `json:"first_name_katakana,omitempty"`
+	LastNameKatakana  *string     `json:"last_name_katakana,omitempty"`
+	EmailAddress      *string     `json:"email_address,omitempty"`
+	Role              *UserRole   `json:"role,omitempty"`
+	Balance           *float64    `json:"balance,omitempty"`
+	Status            *UserStatus `json:"status,omitempty"`
 }
 
-func (e *CustomerStatus) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
+type Wallet struct {
+	WalletAddress string       `json:"wallet_address"`
+	UserID        string       `json:"user_id"`
+	Balance       float64      `json:"balance"`
+	Currency      string       `json:"currency"`
+	Status        WalletStatus `json:"status"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
+	User          *User        `json:"user"`
 }
 
-func (e CustomerStatus) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
+type WalletConnection struct {
+	Wallets  []*Wallet `json:"wallets"`
+	PageInfo *PageInfo `json:"pageInfo"`
+}
+
+type WalletInput struct {
+	UserID        string        `json:"user_id"`
+	WalletAddress string        `json:"wallet_address"`
+	Balance       *float64      `json:"balance,omitempty"`
+	Currency      *string       `json:"currency,omitempty"`
+	Status        *WalletStatus `json:"status,omitempty"`
+}
+
+type WalletStats struct {
+	TotalWallets   int     `json:"totalWallets"`
+	ActiveWallets  int     `json:"activeWallets"`
+	TotalBalance   float64 `json:"totalBalance"`
+	AverageBalance float64 `json:"averageBalance"`
+}
+
+type WalletUpdateInput struct {
+	Balance  *float64      `json:"balance,omitempty"`
+	Currency *string       `json:"currency,omitempty"`
+	Status   *WalletStatus `json:"status,omitempty"`
 }
 
 type InteractionChannel string
@@ -533,6 +517,183 @@ func (e *SortOrder) UnmarshalJSON(b []byte) error {
 }
 
 func (e SortOrder) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UserRole string
+
+const (
+	UserRoleUser      UserRole = "USER"
+	UserRoleAdmin     UserRole = "ADMIN"
+	UserRoleModerator UserRole = "MODERATOR"
+)
+
+var AllUserRole = []UserRole{
+	UserRoleUser,
+	UserRoleAdmin,
+	UserRoleModerator,
+}
+
+func (e UserRole) IsValid() bool {
+	switch e {
+	case UserRoleUser, UserRoleAdmin, UserRoleModerator:
+		return true
+	}
+	return false
+}
+
+func (e UserRole) String() string {
+	return string(e)
+}
+
+func (e *UserRole) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserRole(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserRole", str)
+	}
+	return nil
+}
+
+func (e UserRole) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UserRole) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UserRole) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UserStatus string
+
+const (
+	UserStatusActive   UserStatus = "ACTIVE"
+	UserStatusInactive UserStatus = "INACTIVE"
+	UserStatusHot      UserStatus = "HOT"
+	UserStatusCold     UserStatus = "COLD"
+	UserStatusPending  UserStatus = "PENDING"
+)
+
+var AllUserStatus = []UserStatus{
+	UserStatusActive,
+	UserStatusInactive,
+	UserStatusHot,
+	UserStatusCold,
+	UserStatusPending,
+}
+
+func (e UserStatus) IsValid() bool {
+	switch e {
+	case UserStatusActive, UserStatusInactive, UserStatusHot, UserStatusCold, UserStatusPending:
+		return true
+	}
+	return false
+}
+
+func (e UserStatus) String() string {
+	return string(e)
+}
+
+func (e *UserStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserStatus", str)
+	}
+	return nil
+}
+
+func (e UserStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UserStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UserStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type WalletStatus string
+
+const (
+	WalletStatusActive    WalletStatus = "ACTIVE"
+	WalletStatusInactive  WalletStatus = "INACTIVE"
+	WalletStatusSuspended WalletStatus = "SUSPENDED"
+	WalletStatusFrozen    WalletStatus = "FROZEN"
+)
+
+var AllWalletStatus = []WalletStatus{
+	WalletStatusActive,
+	WalletStatusInactive,
+	WalletStatusSuspended,
+	WalletStatusFrozen,
+}
+
+func (e WalletStatus) IsValid() bool {
+	switch e {
+	case WalletStatusActive, WalletStatusInactive, WalletStatusSuspended, WalletStatusFrozen:
+		return true
+	}
+	return false
+}
+
+func (e WalletStatus) String() string {
+	return string(e)
+}
+
+func (e *WalletStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = WalletStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid WalletStatus", str)
+	}
+	return nil
+}
+
+func (e WalletStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *WalletStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e WalletStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

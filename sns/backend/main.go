@@ -82,10 +82,10 @@ func main() {
 	resolver.Config.GCPCredentials.PrivateKey = privateKey
 	resolver.Config.GCPCredentials.PrivateKeyID = privateKeyID
 	resolver.Config.GCPCredentials.CredentialFile = serviceAccountPath
-	
+
 	bucketName := os.Getenv("GCS_BUCKET_NAME")
 	googleAccessID := os.Getenv("GCS_GOOGLE_ACCESS_ID")
-	
+
 	// 環境変数の検証とクリーンアップ
 	if bucketName == "" {
 		log.Fatalf("❌ GCS_BUCKET_NAME environment variable is not set")
@@ -93,7 +93,7 @@ func main() {
 	if googleAccessID == "" {
 		log.Fatalf("❌ GCS_GOOGLE_ACCESS_ID environment variable is not set")
 	}
-	
+
 	// バケット名をクリーンアップ
 	bucketName = strings.TrimSpace(bucketName)
 	if strings.Contains(bucketName, " ") {
@@ -101,10 +101,10 @@ func main() {
 		bucketName = strings.Split(bucketName, " ")[0]
 		log.Printf("✅ クリーンアップ後のバケット名: '%s'", bucketName)
 	}
-	
+
 	resolver.Config.GCPCredentials.BucketName = bucketName
 	resolver.Config.GCPCredentials.GoogleAccessID = googleAccessID
-	
+
 	log.Printf("✅ バケット名: %s", bucketName)
 	log.Printf("✅ Google Access ID: %s", googleAccessID)
 
@@ -126,11 +126,11 @@ func main() {
 			"https://narratives-crm.web.app",
 			"https://narratives-crm.firebaseapp.com",
 		},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"*"},
-		ExposedHeaders: []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"*"},
 		AllowCredentials: true,
-		Debug: true,
+		Debug:            true,
 	})
 
 	// ルーティング設定

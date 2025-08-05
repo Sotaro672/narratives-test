@@ -27,7 +27,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, onClose, onShowOrgani
     ...(currentUser && currentUser.canCreateCompany() ? [
       { id: 'organization', icon: '🏢', label: '組織' }
     ] : []),
-    { id: 'customers', icon: '👥', label: '顧客', badge: 24 },
+    { id: 'users', icon: '👥', label: 'ユーザー', badge: 24 },
     { id: 'orders', icon: '📦', label: 'Orders', badge: 8, isComingSoon: true },
     { id: 'interactions', icon: '💬', label: 'Interactions', badge: 12, isComingSoon: true },
     { id: 'files', icon: '📁', label: 'File Manager' },
@@ -37,19 +37,21 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, onClose, onShowOrgani
   ];
 
   const quickActions = [
-    { id: 'new-customer', icon: '➕', label: 'New Customer' },
+    { id: 'new-user', icon: '➕', label: 'New User' },
     { id: 'new-order', icon: '🛒', label: 'New Order' },
     { id: 'upload-file', icon: '📤', label: 'Upload File' },
   ];
 
   const handleMenuItemClick = (item: MenuItem) => {
+    console.log('Menu item clicked:', item.id, item.label);
     if (item.id === 'organization' && onShowOrganization) {
       onShowOrganization();
       onClose();
     } else if (item.id === 'news' && onShowNews) {
       onShowNews();
       onClose();
-    } else if (item.id === 'customers' && onShowCustomer) {
+    } else if (item.id === 'users' && onShowCustomer) {
+      console.log('Users menu clicked, calling onShowCustomer');
       onShowCustomer();
       onClose();
     } else if (item.isComingSoon) {

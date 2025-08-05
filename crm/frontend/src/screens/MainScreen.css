@@ -79,7 +79,7 @@
 }
 
 /* 顧客管理画面スタイル */
-.customer-body {
+.user-body {
   flex: 1;
   width: 100%;
   padding: 2rem;
@@ -88,12 +88,12 @@
   z-index: 1;
 }
 
-.customer-container {
+.user-container {
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.customer-header {
+.user-header {
   text-align: center;
   margin-bottom: 2rem;
   padding: 2rem;
@@ -103,7 +103,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.customer-header h2 {
+.user-header h2 {
   margin: 0 0 0.5rem 0;
   font-size: 2.5rem;
   background: linear-gradient(45deg, #fff, #3498db);
@@ -112,7 +112,7 @@
   background-clip: text;
 }
 
-.customer-header p {
+.user-header p {
   margin: 0;
   font-size: 1.2rem;
   opacity: 0.9;
@@ -125,18 +125,18 @@
   }
   
   .news-body,
-  .customer-body {
+  .user-body {
     padding: 1rem;
     padding-top: 120px;
   }
   
   .news-header,
-  .customer-header {
+  .user-header {
     padding: 1.5rem;
   }
   
   .news-header h2,
-  .customer-header h2 {
+  .user-header h2 {
     font-size: 2rem;
   }
 }

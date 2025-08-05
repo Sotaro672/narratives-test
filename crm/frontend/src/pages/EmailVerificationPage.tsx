@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { crmAuth, crmDb } from '../config/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, collection, addDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const EmailVerificationPage: React.FC = () => {
@@ -27,20 +27,54 @@ const EmailVerificationPage: React.FC = () => {
         const unsubscribe = onAuthStateChanged(crmAuth, async (user) => {
           if (user && user.emailVerified) {
             try {
+              // Firestoreのビジネスユーザー情報を取得
+              const userDocRef = doc(crmDb, 'business_users', user.uid);
+              const userDoc = await getDoc(userDocRef);
+              
+              if (!userDoc.exists()) {
+                setStatus('error');
+                setMessage('ユーザー情報が見つかりません。');
+                return;
+              }
+
+              const userData = userDoc.data();
+              
               // Firestoreのビジネスユーザー情報を更新
-              await updateDoc(doc(crmDb, 'business_users', user.uid), {
+              await updateDoc(userDocRef, {
                 email_verified: true,
                 status: 'active',
                 updated_at: new Date()
               });
 
-              setStatus('success');
-              setMessage('メール認証が完了しました！');
+              // 一次パスワード通知を作成（バックエンドが自動的にメール送信）
+              const temporaryPasswordNotification = {
+                notification_id: `tmppass_${user.uid}_${Date.now()}`,
+                user_id: user.uid,
+                notification_type: 'temporary_password',
+                title: '一次パスワードのお知らせ',
+                body: `${userData.first_name} ${userData.last_name}様の一次パスワードをお送りします。`,
+                created_at: new Date(),
+                is_read: false,
+                read_at: null,
+                processed: false,
+                // メール送信用の追加データ
+                user_email: userData.email_address,
+                user_name: `${userData.last_name} ${userData.first_name}`,
+                temporary_password: userData.temporary_password
+              };
+
+              // notificationsコレクションに通知を追加（バックエンドがウォッチして自動処理）
+              await addDoc(collection(crmDb, 'notifications'), temporaryPasswordNotification);
               
-              // 3秒後にメインページにリダイレクト
+              console.log('Temporary password notification created:', temporaryPasswordNotification.notification_id);
+
+              setStatus('success');
+              setMessage('メール認証が完了しました！一次パスワードをメールでお送りしました。');
+              
+              // 5秒後にメインページにリダイレクト
               setTimeout(() => {
                 window.location.href = '/';
-              }, 3000);
+              }, 5000);
               
             } catch (error) {
               console.error('Error updating user verification status:', error);
@@ -99,7 +133,7 @@ const EmailVerificationPage: React.FC = () => {
               {message}
             </p>
             <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem' }}>
-              3秒後にログインページに移動します...
+              5秒後にログインページに移動します...
             </p>
           </>
         )}

@@ -395,7 +395,7 @@ export const deleteUserFromAuth = async (email: string): Promise<{success: boole
   try {
     // バックエンドURLの設定 - バックエンドが存在しない場合は、代替手段としてFirebaseユーザーは削除せず成功とする
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://narratives-crm-gjzaoyctua-uc.a.run.app'  // Cloud Run URL
+      ? 'https://narratives-crm-221090465383.us-central1.run.app'  // Cloud Run URL
       : 'http://localhost:8080';
       
     console.log('Deleting user from Firebase Auth:', email, 'using backend:', backendUrl);

@@ -7,7 +7,7 @@
     "narratives-test-64976": {
       "hosting": {
         "crm": [
-          "narratives-crm"
+          "narratives-crm-site"
         ],
         "sns": [
           "narratives-test-64976"
@@ -18,7 +18,7 @@
   "etags": {
     "narratives-test-64976": {
       "extensionInstances": {
-        "firestore-send-email": "0b877740dd8eda3809fe08ef1037895a9fc55f7f0cc4a864039ab90d9ebacedd"
+        "firestore-send-email": "dafe42c377f8fc5e649f278fbda316dbe5854ae56b0da7650c23cc2379823dd0"
       }
     }
   }

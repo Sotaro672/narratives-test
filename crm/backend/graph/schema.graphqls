@@ -8,48 +8,98 @@ scalar Time
 # CRM - 顧客管理システム用のスキーマ定義
 
 # =====================================
-# 顧客 (Customer) 関連
+# ユーザー (Users) 関連
 # =====================================
 
-type Customer {
-  id: ID!
-  name: String!
-  email: String!
-  phone: String
-  company: String
-  address: String
-  status: CustomerStatus!
-  createdAt: Time!
-  updatedAt: Time!
+type User {
+  user_id: ID!
+  first_name: String!
+  last_name: String!
+  first_name_katakana: String!
+  last_name_katakana: String!
+  email_address: String!
+  role: UserRole!
+  balance: Float!
+  status: UserStatus!
+  created_at: Time!
+  updated_at: Time!
   
   # リレーション
-  orders: [Order!]!
-  interactions: [Interaction!]!
+  wallets: [Wallet!]!
 }
 
-enum CustomerStatus {
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum UserStatus {
   ACTIVE
   INACTIVE
-  PROSPECT
-  ARCHIVED
+  HOT
+  COLD
+  PENDING
 }
 
-input CustomerInput {
-  name: String!
-  email: String!
-  phone: String
-  company: String
-  address: String
-  status: CustomerStatus
+input UserInput {
+  first_name: String!
+  last_name: String!
+  first_name_katakana: String!
+  last_name_katakana: String!
+  email_address: String!
+  role: UserRole = USER
+  balance: Float = 0
+  status: UserStatus = ACTIVE
 }
 
-input CustomerUpdateInput {
-  name: String
-  email: String
-  phone: String
-  company: String
-  address: String
-  status: CustomerStatus
+input UserUpdateInput {
+  first_name: String
+  last_name: String
+  first_name_katakana: String
+  last_name_katakana: String
+  email_address: String
+  role: UserRole
+  balance: Float
+  status: UserStatus
+}
+
+# =====================================
+# ウォレット (Wallets) 関連
+# =====================================
+
+type Wallet {
+  wallet_address: ID!
+  user_id: ID!
+  balance: Float!
+  currency: String!
+  status: WalletStatus!
+  created_at: Time!
+  updated_at: Time!
+  
+  # リレーション
+  user: User!
+}
+
+enum WalletStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  FROZEN
+}
+
+input WalletInput {
+  user_id: ID!
+  wallet_address: ID!
+  balance: Float = 0
+  currency: String = "JPY"
+  status: WalletStatus = ACTIVE
+}
+
+input WalletUpdateInput {
+  balance: Float
+  currency: String
+  status: WalletStatus
 }
 
 # =====================================
@@ -58,7 +108,7 @@ input CustomerUpdateInput {
 
 type Order {
   id: ID!
-  customerID: ID!
+  user_id: ID!
   orderNumber: String!
   status: OrderStatus!
   totalAmount: Float!
@@ -70,7 +120,7 @@ type Order {
   updatedAt: Time!
   
   # リレーション
-  customer: Customer!
+  user: User!
   items: [OrderItem!]!
 }
 
@@ -97,7 +147,7 @@ type OrderItem {
 }
 
 input OrderInput {
-  customerID: ID!
+  user_id: ID!
   orderNumber: String!
   totalAmount: Float!
   currency: String!
@@ -119,7 +169,7 @@ input OrderItemInput {
 
 type Interaction {
   id: ID!
-  customerID: ID!
+  user_id: ID!
   type: InteractionType!
   subject: String!
   content: String!
@@ -132,7 +182,7 @@ type Interaction {
   updatedAt: Time!
   
   # リレーション
-  customer: Customer!
+  user: User!
 }
 
 enum InteractionType {
@@ -161,7 +211,7 @@ enum InteractionStatus {
 }
 
 input InteractionInput {
-  customerID: ID!
+  user_id: ID!
   type: InteractionType!
   subject: String!
   content: String!
@@ -174,11 +224,18 @@ input InteractionInput {
 # レポート・分析用
 # =====================================
 
-type CustomerStats {
-  totalCustomers: Int!
-  activeCustomers: Int!
-  newCustomersThisMonth: Int!
-  customerGrowthRate: Float!
+type UserStats {
+  totalUsers: Int!
+  activeUsers: Int!
+  newUsersThisMonth: Int!
+  userGrowthRate: Float!
+}
+
+type WalletStats {
+  totalWallets: Int!
+  activeWallets: Int!
+  totalBalance: Float!
+  averageBalance: Float!
 }
 
 type OrderStats {
@@ -190,7 +247,8 @@ type OrderStats {
 }
 
 type DashboardData {
-  customerStats: CustomerStats!
+  userStats: UserStats!
+  walletStats: WalletStats!
   orderStats: OrderStats!
   recentOrders: [Order!]!
   upcomingInteractions: [Interaction!]!
@@ -221,8 +279,13 @@ type PageInfo {
   hasPrev: Boolean!
 }
 
-type CustomerConnection {
-  customers: [Customer!]!
+type UserConnection {
+  users: [User!]!
+  pageInfo: PageInfo!
+}
+
+type WalletConnection {
+  wallets: [Wallet!]!
   pageInfo: PageInfo!
 }
 
@@ -236,19 +299,27 @@ type OrderConnection {
 # =====================================
 
 type Query {
-  # 顧客関連
-  customer(id: ID!): Customer
-  customers(
+  # ユーザー関連
+  user(user_id: ID!): User
+  users(
     pagination: PaginationInput
     search: String
-    status: CustomerStatus
-  ): CustomerConnection!
+    status: UserStatus
+  ): UserConnection!
+  
+  # ウォレット関連
+  wallet(wallet_address: ID!): Wallet
+  wallets(
+    pagination: PaginationInput
+    user_id: ID
+    status: WalletStatus
+  ): WalletConnection!
   
   # 注文関連
   order(id: ID!): Order
   orders(
     pagination: PaginationInput
-    customerID: ID
+    user_id: ID
     status: OrderStatus
     dateFrom: Time
     dateTo: Time
@@ -258,14 +329,15 @@ type Query {
   interaction(id: ID!): Interaction
   interactions(
     pagination: PaginationInput
-    customerID: ID
+    user_id: ID
     type: InteractionType
     status: InteractionStatus
   ): [Interaction!]!
   
   # ダッシュボード・分析
   dashboard: DashboardData!
-  customerStats: CustomerStats!
+  userStats: UserStats!
+  walletStats: WalletStats!
   orderStats: OrderStats!
   
   # ヘルスチェック
@@ -296,10 +368,15 @@ input UploadInput {
 # =====================================
 
 type Mutation {
-  # 顧客関連
-  createCustomer(input: CustomerInput!): Customer!
-  updateCustomer(id: ID!, input: CustomerUpdateInput!): Customer!
-  deleteCustomer(id: ID!): Boolean!
+  # ユーザー関連
+  createUser(input: UserInput!): User!
+  updateUser(user_id: ID!, input: UserUpdateInput!): User!
+  deleteUser(user_id: ID!): Boolean!
+  
+  # ウォレット関連
+  createWallet(input: WalletInput!): Wallet!
+  updateWallet(wallet_address: ID!, input: WalletUpdateInput!): Wallet!
+  deleteWallet(wallet_address: ID!): Boolean!
   
   # 注文関連
   createOrder(input: OrderInput!): Order!

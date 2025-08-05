@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/firestore v1.18.0
 	cloud.google.com/go/storage v1.55.0
 	firebase.google.com/go/v4 v4.17.0
-	github.com/99designs/gqlgen v0.17.76
+	github.com/99designs/gqlgen v0.17.78
 	github.com/joho/godotenv v1.5.1
 	github.com/vektah/gqlparser/v2 v2.5.30
 	google.golang.org/api v0.235.0
@@ -37,7 +37,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect

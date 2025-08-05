@@ -33,8 +33,13 @@ func initFirebase() error {
 	ctx := context.Background()
 
 	// Firebaseプロジェクトの設定
+	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if projectID == "" {
+		projectID = "narratives-test-64976" // デフォルト値
+	}
+
 	config := &firebase.Config{
-		ProjectID: "narratives-crm", // CRM専用プロジェクトIDに戻す
+		ProjectID: projectID,
 	}
 
 	// サービスアカウントキーのパス

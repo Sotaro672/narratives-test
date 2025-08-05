@@ -170,8 +170,18 @@ func (es *EmailService) sendEmail(to, subject, body string) error {
 	// SMTP設定
 	d := gomail.NewDialer(es.SMTPHost, es.SMTPPort, es.SMTPUser, es.SMTPPassword)
 
-	// TLS設定
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	// ポート465の場合はSSL、587の場合はSTARTTLS
+	if es.SMTPPort == 465 {
+		// ポート465はSSL/TLS専用
+		d.SSL = true
+		d.TLSConfig = &tls.Config{
+			ServerName:         es.SMTPHost,
+			InsecureSkipVerify: false,
+		}
+	} else {
+		// ポート587はSTARTTLS
+		d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 
 	// メール送信
 	if err := d.DialAndSend(m); err != nil {
@@ -191,7 +201,19 @@ func (es *EmailService) TestEmailConnection() error {
 	}
 
 	d := gomail.NewDialer(es.SMTPHost, es.SMTPPort, es.SMTPUser, es.SMTPPassword)
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	// ポート465の場合はSSL、587の場合はSTARTTLS
+	if es.SMTPPort == 465 {
+		// ポート465はSSL/TLS専用
+		d.SSL = true
+		d.TLSConfig = &tls.Config{
+			ServerName:         es.SMTPHost,
+			InsecureSkipVerify: false,
+		}
+	} else {
+		// ポート587はSTARTTLS
+		d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 
 	closer, err := d.Dial()
 	if err != nil {

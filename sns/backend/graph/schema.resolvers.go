@@ -129,12 +129,12 @@ func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 	// Firebase Admin SDK初期化
 	credentialsFile := r.Config.GCPCredentials.CredentialFile
 	opt := option.WithCredentialsFile(credentialsFile)
-	
+
 	// Firebase設定にプロジェクトIDを明示的に指定
 	config := &firebase.Config{
 		ProjectID: "narratives-test-64976",
 	}
-	
+
 	app, err := firebase.NewApp(ctx, config, opt)
 	if err != nil {
 		log.Printf("Error initializing Firebase app: %v", err)
@@ -243,12 +243,12 @@ func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error
 	// Firebase Admin SDK初期化
 	credentialsFile := r.Config.GCPCredentials.CredentialFile
 	opt := option.WithCredentialsFile(credentialsFile)
-	
+
 	// Firebase設定にプロジェクトIDを明示的に指定
 	config := &firebase.Config{
 		ProjectID: "narratives-test-64976",
 	}
-	
+
 	app, err := firebase.NewApp(ctx, config, opt)
 	if err != nil {
 		log.Printf("Error initializing Firebase app: %v", err)

@@ -5,7 +5,7 @@ import MainBody from '../widgets/MainBody';
 import AuthBody from '../widgets/AuthBody';
 import OrganizationBody from '../widgets/OrganizationBody';
 import NewsField from '../widgets/NewsField';
-import Customer from '../widgets/Customer';
+import UserManagement from '../widgets/UserManagement';
 import BusinessUserModel from '../models/BusinessUsers';
 import type { UnifiedUserModel } from '../models/UnifiedUser';
 import { logoutUser } from '../services/authService';
@@ -166,6 +166,7 @@ const MainScreen: React.FC = () => {
   };
 
   const handleShowCustomer = () => {
+    console.log('handleShowCustomer called - showing user management');
     setShowCustomerBody(true);
     setShowOrganizationBody(false); // 他の画面を非表示
     setShowNewsBody(false);
@@ -213,13 +214,13 @@ const MainScreen: React.FC = () => {
             </div>
           </div>
         ) : showCustomerBody ? (
-          <div className="customer-body">
-            <div className="customer-container">
-              <div className="customer-header">
+          <div className="user-body">
+            <div className="user-container">
+              <div className="user-header">
                 <h2>👥 顧客管理</h2>
                 <p>顧客情報の管理と分析</p>
               </div>
-              <Customer />
+              <UserManagement />
             </div>
           </div>
         ) : (

@@ -19,7 +19,7 @@
    SMTP_USER=あなたのGmailアドレス
    SMTP_PASSWORD=生成されたアプリパスワード
    FROM_EMAIL=あなたのGmailアドレス
-   FROM_NAME=ScreenWriters CRM System
+   FROM_NAME=Narratives CRM System
    ```
 
 ## 手動テスト方法

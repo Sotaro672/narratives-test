@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"firebase.google.com/go/v4/auth"
@@ -42,8 +43,13 @@ func (fas *FirebaseAuthService) GenerateEmailVerificationLink(ctx context.Contex
 	}
 
 	// アクションコード設定を使用してリンクを生成
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "https://narratives-crm-site.web.app"
+	}
+
 	settings := &auth.ActionCodeSettings{
-		URL:             "https://narratives-test-64976.web.app/auth/verify",
+		URL:             frontendURL + "/auth/verify",
 		HandleCodeInApp: false,
 	}
 
@@ -152,7 +158,11 @@ func (fas *FirebaseAuthService) SendCustomVerificationEmail(ctx context.Context,
 } // createCustomVerificationEmailBody カスタム認証メールの本文を作成
 func (fas *FirebaseAuthService) createCustomVerificationEmailBody(displayName, email, temporaryPassword, verificationLink string) string {
 	// 常にハードコードされたテンプレートを使用し、テンプレートファイルの読み込み失敗を避ける
-	loginURL := "https://narratives-test-64976.web.app"
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "https://narratives-crm-site.web.app" // デフォルト値
+	}
+	loginURL := frontendURL
 
 	// デバッグログ
 	log.Printf("メール認証リンクの生成: %s のための認証メールを作成します", email)
