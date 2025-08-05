@@ -36,10 +36,15 @@ type BusinessUserData struct {
 	BusinessUserID    string    `firestore:"business_user_id"`
 	FirstName         string    `firestore:"first_name"`
 	LastName          string    `firestore:"last_name"`
+	FirstNameKatakana string    `firestore:"first_name_katakana"`
+	LastNameKatakana  string    `firestore:"last_name_katakana"`
 	EmailAddress      string    `firestore:"email_address"`
 	Role              string    `firestore:"role"`
 	TemporaryPassword *string   `firestore:"temporary_password"`
+	Balance           float64   `firestore:"balance"`
+	Status            string    `firestore:"status"`
 	CreatedAt         time.Time `firestore:"created_at"`
+	UpdatedAt         time.Time `firestore:"updated_at"`
 }
 
 // NewNotificationWatcher 通知監視サービスのコンストラクタ
@@ -119,10 +124,10 @@ func (nw *NotificationWatcher) processUnprocessedNotifications(ctx context.Conte
 
 // processWelcomeEmailNotification 招待メール通知を処理
 func (nw *NotificationWatcher) processWelcomeEmailNotification(ctx context.Context, docID string, notification *NotificationData) error {
-	// ビジネスユーザー情報を取得
-	userDoc, err := nw.client.Collection("business_users").Doc(notification.BusinessUserID).Get(ctx)
+	// ユーザー情報を取得（usersコレクションから）
+	userDoc, err := nw.client.Collection("users").Doc(notification.BusinessUserID).Get(ctx)
 	if err != nil {
-		return fmt.Errorf("ビジネスユーザー情報取得エラー: %v", err)
+		return fmt.Errorf("ユーザー情報取得エラー: %v", err)
 	}
 
 	var businessUserData BusinessUserData

@@ -3,7 +3,7 @@ import { setContext } from '@apollo/client/link/context';
 
 // GraphQLサーバーのHTTPリンクを作成
 const httpLink = createHttpLink({
-  uri: 'https://narratives-crm-221090465383.us-central1.run.app/graphql', // CRM専用のCloud RunのGraphQLエンドポイント
+  uri: 'https://narratives-crm-backend-221090465383.asia-northeast1.run.app/graphql', // CRM専用のCloud RunのGraphQLエンドポイント
 });
 
 // 認証用のコンテキストリンク（将来的にFirebase認証トークンを追加可能）

@@ -79,10 +79,10 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		return nil, fmt.Errorf("failed to set custom claims: %v", err)
 	}
 	
-	// Firestoreにユーザー情報を保存
+	// Firestoreにビジネスユーザー情報を保存
 	now := time.Now()
-	userData := map[string]interface{}{
-		"user_id":             userRecord.UID,
+	businessUserData := map[string]interface{}{
+		"business_user_id":    userRecord.UID,
 		"first_name":          input.FirstName,
 		"last_name":           input.LastName,
 		"first_name_katakana": input.FirstNameKatakana,
@@ -91,15 +91,16 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		"role":                roleString,
 		"balance":             0.0,
 		"status":              "active",
+		"temporary_password":  tempPassword,
 		"created_at":          now,
 		"updated_at":          now,
 	}
 	
-	_, err = firestoreClient.Collection("users").Doc(userRecord.UID).Set(ctx, userData)
+	_, err = firestoreClient.Collection("business_users").Doc(userRecord.UID).Set(ctx, businessUserData)
 	if err != nil {
 		// 作成したユーザーを削除してからエラーを返す
 		authClient.DeleteUser(ctx, userRecord.UID)
-		return nil, fmt.Errorf("failed to save user to Firestore: %v", err)
+		return nil, fmt.Errorf("failed to save business user to Firestore: %v", err)
 	}
 	
 	// 招待メールを送信

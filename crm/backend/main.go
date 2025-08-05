@@ -24,9 +24,10 @@ import (
 )
 
 var (
-	firebaseApp     *firebase.App
-	authClient      *auth.Client
-	firestoreClient *firestore.Client
+	firebaseApp         *firebase.App
+	authClient          *auth.Client
+	firestoreClient     *firestore.Client
+	firebaseAuthService *services.FirebaseAuthService
 )
 
 func initFirebase() error {
@@ -113,7 +114,7 @@ func main() {
 	}
 
 	// Firebase認証サービスを初期化
-	firebaseAuthService := services.NewFirebaseAuthService(authClient)
+	firebaseAuthService = services.NewFirebaseAuthService(authClient)
 
 	// 通知監視サービスを初期化
 	notificationWatcher := services.NewNotificationWatcher(firestoreClient, emailService, firebaseAuthService)
