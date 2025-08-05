@@ -6,10 +6,13 @@ package graph
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"narratives-crm-backend/graph/generated"
 	"narratives-crm-backend/graph/model"
+	"narratives-crm-backend/services"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,12 +20,122 @@ import (
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/storage"
 	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/auth"
 	"google.golang.org/api/option"
 )
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: CreateUser - createUser"))
+	// Firebase Authクライアントを初期化
+	app, err := getFirebaseApp(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Firebase app: %v", err)
+	}
+	
+	authClient, err := app.Auth(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Firebase Auth client: %v", err)
+	}
+	
+	// Firestoreクライアントを初期化
+	firestoreClient, err := getFirestoreClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Firestore client: %v", err)
+	}
+	defer firestoreClient.Close()
+	
+	// 一時パスワードを生成
+	tempPassword, err := generateTemporaryPassword()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate temporary password: %v", err)
+	}
+	
+	// Firebase Authでユーザーを作成
+	userToCreate := (&auth.UserToCreate{}).
+		Email(input.EmailAddress).
+		EmailVerified(false).
+		Password(tempPassword).
+		DisplayName(fmt.Sprintf("%s %s", input.LastName, input.FirstName)).
+		Disabled(false)
+	
+	userRecord, err := authClient.CreateUser(ctx, userToCreate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user in Firebase Auth: %v", err)
+	}
+	
+	// ユーザーロールを処理
+	roleString := "user" // デフォルト
+	if input.Role != nil {
+		roleString = input.Role.String()
+	}
+	
+	// ユーザーロールをFirebase Auth custom claimsに設定
+	claims := map[string]interface{}{
+		"role": roleString,
+	}
+	if err := authClient.SetCustomUserClaims(ctx, userRecord.UID, claims); err != nil {
+		// 作成したユーザーを削除してからエラーを返す
+		authClient.DeleteUser(ctx, userRecord.UID)
+		return nil, fmt.Errorf("failed to set custom claims: %v", err)
+	}
+	
+	// Firestoreにユーザー情報を保存
+	now := time.Now()
+	userData := map[string]interface{}{
+		"user_id":             userRecord.UID,
+		"first_name":          input.FirstName,
+		"last_name":           input.LastName,
+		"first_name_katakana": input.FirstNameKatakana,
+		"last_name_katakana":  input.LastNameKatakana,
+		"email_address":       input.EmailAddress,
+		"role":                roleString,
+		"balance":             0.0,
+		"status":              "active",
+		"created_at":          now,
+		"updated_at":          now,
+	}
+	
+	_, err = firestoreClient.Collection("users").Doc(userRecord.UID).Set(ctx, userData)
+	if err != nil {
+		// 作成したユーザーを削除してからエラーを返す
+		authClient.DeleteUser(ctx, userRecord.UID)
+		return nil, fmt.Errorf("failed to save user to Firestore: %v", err)
+	}
+	
+	// 招待メールを送信
+	if err := sendWelcomeEmail(ctx, input, tempPassword, userRecord.UID); err != nil {
+		// ユーザーは作成済みなので、メール送信失敗はログに記録するだけ
+		fmt.Printf("Warning: Failed to send welcome email to %s: %v\n", input.EmailAddress, err)
+	}
+	
+	// レスポンス用のUserオブジェクトを作成
+	role := model.UserRoleUser
+	if input.Role != nil {
+		switch *input.Role {
+		case model.UserRoleAdmin:
+			role = model.UserRoleAdmin
+		case model.UserRoleModerator:
+			role = model.UserRoleModerator
+		default:
+			role = model.UserRoleUser
+		}
+	}
+	
+	user := &model.User{
+		UserID:            userRecord.UID,
+		FirstName:         input.FirstName,
+		LastName:          input.LastName,
+		FirstNameKatakana: input.FirstNameKatakana,
+		LastNameKatakana:  input.LastNameKatakana,
+		EmailAddress:      input.EmailAddress,
+		Role:              role,
+		Balance:           0.0,
+		Status:            model.UserStatusActive,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+	}
+	
+	return user, nil
 }
 
 // UpdateUser is the resolver for the updateUser field.
@@ -583,4 +696,54 @@ func getStringFromData(data map[string]interface{}, key string) string {
 		return val
 	}
 	return ""
+}
+
+// Firebase Appを取得するヘルパー関数
+func getFirebaseApp(ctx context.Context) (*firebase.App, error) {
+	credentialsPath := "./narratives-crm-service_account.json"
+	opt := option.WithCredentialsFile(credentialsPath)
+	return firebase.NewApp(ctx, nil, opt)
+}
+
+// 一時パスワードを生成するヘルパー関数
+func generateTemporaryPassword() (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const length = 12
+	
+	password := make([]byte, length)
+	for i := range password {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		password[i] = charset[n.Int64()]
+	}
+	
+	return string(password), nil
+}
+
+// 招待メールを送信するヘルパー関数
+func sendWelcomeEmail(ctx context.Context, input model.UserInput, tempPassword, userID string) error {
+	// Firestoreクライアントを取得
+	firestoreClient, err := getFirestoreClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get Firestore client: %v", err)
+	}
+	defer firestoreClient.Close()
+	
+	// メールサービスを初期化
+	mailService := services.NewMailService(firestoreClient)
+	emailService := services.NewEmailService(mailService)
+	
+	// メールデータを準備
+	welcomeData := services.WelcomeEmailData{
+		RecipientEmail:    input.EmailAddress,
+		RecipientName:     fmt.Sprintf("%s %s", input.LastName, input.FirstName),
+		TemporaryPassword: tempPassword,
+		Role:              input.Role.String(),
+		LoginURL:          "https://narratives-crm-site.web.app", // フロントエンドのURL
+	}
+	
+	// 招待メールを送信
+	return emailService.SendWelcomeEmail(ctx, welcomeData, userID)
 }
