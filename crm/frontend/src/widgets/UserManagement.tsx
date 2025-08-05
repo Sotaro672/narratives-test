@@ -5,7 +5,7 @@ import { AuthenticationEmailService } from '../services/authenticationEmailServi
 import './UserManagement.css';
 
 // CRM Backend API エンドポイント（新しいCloud Runサービス）
-const CRM_API_BASE_URL = 'https://narratives-crm-backend-221090465383.asia-northeast1.run.app';
+const CRM_API_BASE_URL = 'https://narratives-crm-699392181476-hdgue3uuja-uc.a.run.app';
 
 // Development proxy endpoint (for local testing only)
 const isDevelopment = import.meta.env?.DEV || false;

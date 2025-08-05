@@ -96,7 +96,7 @@ const MainBody: React.FC<MainBodyProps> = ({ isLoggedIn }) => {
             <h4>🔍 GraphQL Playground</h4>
             <p>GraphQLクエリとミューテーションのテスト</p>
             <a 
-              href="https://narratives-crm-backend-221090465383.asia-northeast1.run.app/" 
+              href="https://narratives-crm-699392181476-hdgue3uuja-uc.a.run.app/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="feature-btn"
