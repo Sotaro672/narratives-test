@@ -33,6 +33,7 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
   const [showBrandManagement, setShowBrandManagement] = useState(false);
   const [companyBrands, setCompanyBrands] = useState<any[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // 画面更新用トリガー
 
   // ユーザー情報を再作成する関数
   const recreateUserInfo = async () => {
@@ -69,7 +70,10 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
 
   // 現在所属している会社の情報を取得
   const fetchCurrentCompanyInfo = async () => {
+    console.log('fetchCurrentCompanyInfo called with currentUser:', currentUser?.userId);
+    
     if (!currentUser) {
+      console.log('No currentUser, setting company info to null');
       setCurrentCompanyInfo(null);
       return;
     }
@@ -82,6 +86,7 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
     }
 
     if (!currentUser.belongTo || currentUser.belongTo.length === 0) {
+      console.log('User has no belongTo companies, setting company info to null');
       setCurrentCompanyInfo(null);
       return;
     }
@@ -90,10 +95,13 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
     try {
       // 最初の所属会社の情報を取得
       const companyId = currentUser.belongTo[0];
+      console.log('Fetching company info for companyId:', companyId);
+      
       const companyDoc = await getDoc(doc(crmDb, 'companies', companyId));
       
       if (companyDoc.exists()) {
         const companyData = companyDoc.data();
+        console.log('Company data retrieved:', companyData);
         
         // その会社のウォレット情報を取得
         const walletsQuery = query(
@@ -106,16 +114,23 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
         if (!walletDocs.empty) {
           const walletData = walletDocs.docs[0].data();
           walletAddress = walletData.wallet_address || 'アドレスが見つかりません';
+          console.log('Wallet address found:', walletAddress);
+        } else {
+          console.log('No wallet found for company:', companyId);
         }
         
-        setCurrentCompanyInfo({
+        const companyInfo = {
           companyName: companyData.company_name || 'Company名が見つかりません',
           walletAddress: walletAddress
-        });
+        };
+        
+        console.log('Setting company info:', companyInfo);
+        setCurrentCompanyInfo(companyInfo);
         
         // ブランド情報も取得
-        fetchCompanyBrands(companyId);
+        await fetchCompanyBrands(companyId);
       } else {
+        console.log('Company document does not exist for ID:', companyId);
         setCurrentCompanyInfo({
           companyName: '会社情報が見つかりません',
           walletAddress: 'ウォレットが見つかりません'
@@ -129,6 +144,7 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
       });
     } finally {
       setLoadingCompanyInfo(false);
+      console.log('fetchCurrentCompanyInfo completed');
     }
   };
   
@@ -208,9 +224,10 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
   // ユーザー情報が変更されたときに会社情報を取得
   useEffect(() => {
     if (currentUser) {
+      console.log('useEffect triggered: fetching company info for user', currentUser.userId);
       fetchCurrentCompanyInfo();
     }
-  }, [currentUser]);
+  }, [currentUser, refreshTrigger]); // refreshTriggerを依存配列に追加
 
   const handleCompanyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCompanyData({
@@ -405,25 +422,35 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
       }
       
       console.log('Company data:', company.toJson());
-      alert(`🎉 会社「${company.companyName}」が正常に作成されました！\n\n✅ Solanaウォレットが開設されました\n✅ あなたのロールがルートブランド管理者に昇格されました\n✅ 所属会社に追加されました`);
+      
+      // 即座にUIを更新開始
+      console.log('Starting immediate UI update after company creation');
+      
+      // フォームをリセットして非表示にする
+      setShowCreateForm(false);
+      setCompanyData({
+        companyName: '',
+        companyNameKatakana: '',
+      });
       
       // 親コンポーネントに会社作成完了を通知（ユーザー情報の更新をトリガー）
       if (onCompanyCreated) {
+        console.log('Notifying parent component of company creation');
         onCompanyCreated();
       }
       
-      // 少し待機してからUI状態を更新
-      setTimeout(async () => {
-        // 会社情報を再取得
-        await fetchCurrentCompanyInfo();
-        
-        // フォームをリセットして非表示にする
-        setShowCreateForm(false);
-        setCompanyData({
-          companyName: '',
-          companyNameKatakana: '',
-        });
-      }, 1000); // 1秒待機してからUI更新
+      // 会社情報を即座に再取得して画面を更新
+      console.log('Fetching updated company information');
+      await fetchCurrentCompanyInfo();
+      
+      // 画面更新トリガーを実行してコンポーネントの強制再レンダリング
+      setRefreshTrigger(prev => prev + 1);
+      console.log('Refresh trigger updated to force component re-render');
+      
+      // 成功メッセージを表示
+      alert(`🎉 会社「${company.companyName}」が正常に作成されました！\n\n✅ Solanaウォレットが開設されました\n✅ あなたのロールがルートブランド管理者に昇格されました\n✅ 所属会社に追加されました\n\n画面が自動的に更新されました。`);
+      
+      console.log('Company creation process completed successfully');
     } catch (error) {
       console.error('Company creation error:', error);
       alert('会社の作成に失敗しました: ' + (error as Error).message);
