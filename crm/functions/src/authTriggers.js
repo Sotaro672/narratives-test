@@ -1,13 +1,15 @@
-import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 
-// Initialize Firebase Admin
-admin.initializeApp();
+// Firebase Admin SDKを初期化（まだ初期化されていない場合）
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
-const NARRATIVES_SNS_API_BASE_URL = "https://narratives-api-765852113927.asia-northeast1.run.app";
+const db = admin.firestore();
 
 // ユーザーのメール認証状態が変更された時のトリガー
-export const onUserEmailVerified = functions.auth.user().onUpdate(async (change, context) => {
+exports.onUserEmailVerified = functions.auth.user().onUpdate(async (change, context) => {
   const beforeUser = change.before;
   const afterUser = change.after;
   
@@ -16,8 +18,6 @@ export const onUserEmailVerified = functions.auth.user().onUpdate(async (change,
     console.log(`User ${afterUser.uid} verified their email: ${afterUser.email}`);
     
     try {
-      const db = admin.firestore();
-      
       // business_usersコレクションでユーザー情報を確認
       const businessUserDoc = await db.collection('business_users').doc(afterUser.uid).get();
       
@@ -29,7 +29,7 @@ export const onUserEmailVerified = functions.auth.user().onUpdate(async (change,
       const businessUserData = businessUserDoc.data();
       
       // 一時パスワードが設定されているかチェック
-      if (!businessUserData?.temporary_password) {
+      if (!businessUserData.temporary_password) {
         console.log(`No temporary password found for ${afterUser.uid}`);
         return;
       }
@@ -66,60 +66,5 @@ export const onUserEmailVerified = functions.auth.user().onUpdate(async (change,
     } catch (error) {
       console.error('Error creating welcome email notification:', error);
     }
-  }
-});
-
-// CORS proxy function for narratives-test SNS API
-export const narrativesApiProxy = functions.https.onRequest(async (req, res) => {
-  // Set CORS headers
-  res.set("Access-Control-Allow-Origin", "https://narratives-crm-site.web.app");
-  res.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
-  res.set("Access-Control-Allow-Credentials", "true");
-
-  // Handle preflight requests
-  if (req.method === "OPTIONS") {
-    res.status(200).send();
-    return;
-  }
-
-  try {
-    // Extract the path from the request
-    const apiPath = req.path || "/";
-    const targetUrl = `${NARRATIVES_SNS_API_BASE_URL}${apiPath}`;
-    
-    console.log(`Proxying ${req.method} ${targetUrl}`);
-
-    // Forward the request to the narratives API
-    const cleanHeaders: Record<string, string> = {};
-    Object.entries(req.headers).forEach(([key, value]) => {
-      if (key !== 'host' && typeof value === 'string') {
-        cleanHeaders[key] = value;
-      }
-    });
-
-    const response = await fetch(targetUrl, {
-      method: req.method,
-      headers: cleanHeaders,
-      body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
-    });
-
-    // Forward the response
-    const responseData = await response.text();
-    
-    // Set response headers
-    response.headers.forEach((value, key) => {
-      if (key.toLowerCase() !== "access-control-allow-origin") {
-        res.set(key, value);
-      }
-    });
-
-    res.status(response.status).send(responseData);
-  } catch (error) {
-    console.error("Proxy error:", error);
-    res.status(500).json({
-      error: "Proxy error",
-      message: error instanceof Error ? error.message : "Unknown error"
-    });
   }
 });

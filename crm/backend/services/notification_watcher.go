@@ -80,6 +80,10 @@ func (nw *NotificationWatcher) processUnprocessedNotifications(ctx context.Conte
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 
+	processedCount := 0
+	welcomeEmailCount := 0
+	unprocessedCount := 0
+
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
@@ -95,15 +99,22 @@ func (nw *NotificationWatcher) processUnprocessedNotifications(ctx context.Conte
 			continue
 		}
 
+		processedCount++
+
 		// welcome_emailタイプでない場合はスキップ
 		if notification.NotificationType != "welcome_email" {
 			continue
 		}
 
+		welcomeEmailCount++
+
 		// 既に処理済みの場合はスキップ
 		if notification.Processed {
 			continue
 		}
+
+		unprocessedCount++
+		log.Printf("未処理のwelcome_email通知を発見: ID=%s, UserID=%s", doc.Ref.ID, notification.BusinessUserID)
 
 		// 招待メールを送信
 		if err := nw.processWelcomeEmailNotification(ctx, doc.Ref.ID, &notification); err != nil {
@@ -112,6 +123,11 @@ func (nw *NotificationWatcher) processUnprocessedNotifications(ctx context.Conte
 		}
 
 		log.Printf("招待メール送信完了: %s", notification.NotificationID)
+	}
+
+	// 処理結果をログ出力（30秒ごとに1回なので詳細ログも問題なし）
+	if processedCount > 0 {
+		log.Printf("通知処理完了: 総件数=%d, welcome_email=%d, 未処理=%d", processedCount, welcomeEmailCount, unprocessedCount)
 	}
 
 	return nil
