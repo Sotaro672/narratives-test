@@ -31,25 +31,25 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Firebase app: %v", err)
 	}
-	
+
 	authClient, err := app.Auth(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Firebase Auth client: %v", err)
 	}
-	
+
 	// Firestoreクライアントを初期化
 	firestoreClient, err := getFirestoreClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Firestore client: %v", err)
 	}
 	defer firestoreClient.Close()
-	
+
 	// 一時パスワードを生成
 	tempPassword, err := generateTemporaryPassword()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate temporary password: %v", err)
 	}
-	
+
 	// Firebase Authでユーザーを作成
 	userToCreate := (&auth.UserToCreate{}).
 		Email(input.EmailAddress).
@@ -57,18 +57,18 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		Password(tempPassword).
 		DisplayName(fmt.Sprintf("%s %s", input.LastName, input.FirstName)).
 		Disabled(false)
-	
+
 	userRecord, err := authClient.CreateUser(ctx, userToCreate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user in Firebase Auth: %v", err)
 	}
-	
+
 	// ユーザーロールを処理
 	roleString := "user" // デフォルト
 	if input.Role != nil {
 		roleString = input.Role.String()
 	}
-	
+
 	// ユーザーロールをFirebase Auth custom claimsに設定
 	claims := map[string]interface{}{
 		"role": roleString,
@@ -78,7 +78,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		authClient.DeleteUser(ctx, userRecord.UID)
 		return nil, fmt.Errorf("failed to set custom claims: %v", err)
 	}
-	
+
 	// Firestoreにビジネスユーザー情報を保存
 	now := time.Now()
 	businessUserData := map[string]interface{}{
@@ -95,20 +95,20 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		"created_at":          now,
 		"updated_at":          now,
 	}
-	
+
 	_, err = firestoreClient.Collection("business_users").Doc(userRecord.UID).Set(ctx, businessUserData)
 	if err != nil {
 		// 作成したユーザーを削除してからエラーを返す
 		authClient.DeleteUser(ctx, userRecord.UID)
 		return nil, fmt.Errorf("failed to save business user to Firestore: %v", err)
 	}
-	
+
 	// 招待メールを送信
 	if err := sendWelcomeEmail(ctx, input, tempPassword, userRecord.UID); err != nil {
 		// ユーザーは作成済みなので、メール送信失敗はログに記録するだけ
 		fmt.Printf("Warning: Failed to send welcome email to %s: %v\n", input.EmailAddress, err)
 	}
-	
+
 	// レスポンス用のUserオブジェクトを作成
 	role := model.UserRoleUser
 	if input.Role != nil {
@@ -121,7 +121,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 			role = model.UserRoleUser
 		}
 	}
-	
+
 	user := &model.User{
 		UserID:            userRecord.UID,
 		FirstName:         input.FirstName,
@@ -135,7 +135,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		CreatedAt:         now,
 		UpdatedAt:         now,
 	}
-	
+
 	return user, nil
 }
 
@@ -201,8 +201,11 @@ func (r *mutationResolver) DeleteInteraction(ctx context.Context, id string) (bo
 
 // GetAvatarUploadURL is the resolver for the getAvatarUploadUrl field.
 func (r *mutationResolver) GetAvatarUploadURL(ctx context.Context, filename string, contentType string, folder *string) (*model.UploadURL, error) {
-	// サービスアカウントファイルのパス
-	credentialsPath := "./narratives-crm-service_account.json"
+	// 環境変数からサービスアカウントファイルのパスを取得
+	credentialsPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if credentialsPath == "" {
+		credentialsPath = "./narratives-test-service-account.json" // デフォルト値
+	}
 
 	// サービスアカウント情報を読み取り
 	serviceAccount, err := readServiceAccountKey(credentialsPath)
@@ -308,7 +311,7 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.PaginationI
 
 	// usersコレクションから取得
 	var query firestore.Query = client.Collection("users").Query
-	
+
 	// ステータスでフィルタリング（指定されている場合）
 	if status != nil {
 		statusStr := ""
@@ -340,7 +343,7 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.PaginationI
 	if pagination != nil && pagination.Limit != nil {
 		limit = *pagination.Limit
 	}
-	
+
 	query = query.Limit(limit)
 
 	// データを取得
@@ -353,7 +356,7 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.PaginationI
 	users := make([]*model.User, 0, len(docs))
 	for _, doc := range docs {
 		data := doc.Data()
-		
+
 		// time.Time型の処理
 		var createdAt, updatedAt time.Time
 		if ct, ok := data["created_at"].(time.Time); ok {
@@ -368,7 +371,7 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.PaginationI
 		} else {
 			createdAt = time.Now() // デフォルト値
 		}
-		
+
 		if ut, ok := data["updated_at"].(time.Time); ok {
 			updatedAt = ut
 		} else if utStr, ok := data["updated_at"].(string); ok {
@@ -431,7 +434,7 @@ func (r *queryResolver) Users(ctx context.Context, pagination *model.PaginationI
 			CreatedAt:         createdAt,
 			UpdatedAt:         updatedAt,
 		}
-		
+
 		users = append(users, user)
 	}
 
@@ -467,7 +470,7 @@ func (r *queryResolver) Wallets(ctx context.Context, pagination *model.Paginatio
 
 	// walletsコレクションから取得
 	var query firestore.Query = client.Collection("wallets").Query
-	
+
 	// ユーザーIDでフィルタリング（指定されている場合）
 	if userID != nil && *userID != "" {
 		query = query.Where("user_id", "==", *userID)
@@ -494,7 +497,7 @@ func (r *queryResolver) Wallets(ctx context.Context, pagination *model.Paginatio
 	if pagination != nil && pagination.Limit != nil {
 		limit = *pagination.Limit
 	}
-	
+
 	query = query.Limit(limit)
 
 	// データを取得
@@ -507,7 +510,7 @@ func (r *queryResolver) Wallets(ctx context.Context, pagination *model.Paginatio
 	wallets := make([]*model.Wallet, 0, len(docs))
 	for _, doc := range docs {
 		data := doc.Data()
-		
+
 		// time.Time型の処理
 		var createdAt, updatedAt time.Time
 		if ct, ok := data["created_at"].(time.Time); ok {
@@ -522,7 +525,7 @@ func (r *queryResolver) Wallets(ctx context.Context, pagination *model.Paginatio
 		} else {
 			createdAt = time.Now() // デフォルト値
 		}
-		
+
 		if ut, ok := data["updated_at"].(time.Time); ok {
 			updatedAt = ut
 		} else if utStr, ok := data["updated_at"].(string); ok {
@@ -557,19 +560,19 @@ func (r *queryResolver) Wallets(ctx context.Context, pagination *model.Paginatio
 
 		wallet := &model.Wallet{
 			WalletAddress: getStringFromData(data, "wallet_address"),
-			UserID:       getStringFromData(data, "user_id"),
-			Balance:      balance,
-			Currency:     getStringFromData(data, "currency"),
-			Status:       walletStatus,
-			CreatedAt:    createdAt,
-			UpdatedAt:    updatedAt,
+			UserID:        getStringFromData(data, "user_id"),
+			Balance:       balance,
+			Currency:      getStringFromData(data, "currency"),
+			Status:        walletStatus,
+			CreatedAt:     createdAt,
+			UpdatedAt:     updatedAt,
 		}
-		
+
 		// wallet_addressが空の場合は、document IDを使用
 		if wallet.WalletAddress == "" {
 			wallet.WalletAddress = doc.Ref.ID
 		}
-		
+
 		wallets = append(wallets, wallet)
 	}
 
@@ -671,23 +674,26 @@ func readServiceAccountKey(filePath string) (*ServiceAccountKey, error) {
 
 // Firestoreクライアントを初期化
 func getFirestoreClient(ctx context.Context) (*firestore.Client, error) {
-	// サービスアカウントファイルのパス
-	credentialsPath := "./narratives-crm-service_account.json"
-	
+	// 環境変数からサービスアカウントファイルのパスを取得
+	credentialsPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if credentialsPath == "" {
+		credentialsPath = "./narratives-test-service-account.json" // デフォルト値
+	}
+
 	opt := option.WithCredentialsFile(credentialsPath)
-	
+
 	// Firebase App を初期化
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Firebase App: %v", err)
 	}
-	
+
 	// Firestore クライアントを取得
 	client, err := app.Firestore(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Firestore client: %v", err)
 	}
-	
+
 	return client, nil
 }
 
@@ -701,7 +707,10 @@ func getStringFromData(data map[string]interface{}, key string) string {
 
 // Firebase Appを取得するヘルパー関数
 func getFirebaseApp(ctx context.Context) (*firebase.App, error) {
-	credentialsPath := "./narratives-crm-service_account.json"
+	credentialsPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if credentialsPath == "" {
+		credentialsPath = "./narratives-test-service-account.json" // デフォルト値
+	}
 	opt := option.WithCredentialsFile(credentialsPath)
 	return firebase.NewApp(ctx, nil, opt)
 }
@@ -710,7 +719,7 @@ func getFirebaseApp(ctx context.Context) (*firebase.App, error) {
 func generateTemporaryPassword() (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const length = 12
-	
+
 	password := make([]byte, length)
 	for i := range password {
 		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
@@ -719,7 +728,7 @@ func generateTemporaryPassword() (string, error) {
 		}
 		password[i] = charset[n.Int64()]
 	}
-	
+
 	return string(password), nil
 }
 
@@ -731,11 +740,11 @@ func sendWelcomeEmail(ctx context.Context, input model.UserInput, tempPassword, 
 		return fmt.Errorf("failed to get Firestore client: %v", err)
 	}
 	defer firestoreClient.Close()
-	
+
 	// メールサービスを初期化
 	mailService := services.NewMailService(firestoreClient)
 	emailService := services.NewEmailService(mailService)
-	
+
 	// メールデータを準備
 	welcomeData := services.WelcomeEmailData{
 		RecipientEmail:    input.EmailAddress,
@@ -744,7 +753,7 @@ func sendWelcomeEmail(ctx context.Context, input model.UserInput, tempPassword, 
 		Role:              input.Role.String(),
 		LoginURL:          "https://narratives-crm-site.web.app", // フロントエンドのURL
 	}
-	
+
 	// 招待メールを送信
 	return emailService.SendWelcomeEmail(ctx, welcomeData, userID)
 }

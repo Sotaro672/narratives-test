@@ -3,7 +3,7 @@ import { gql } from '@apollo/client';
 
 export interface Order {
   id: string;
-  customerID: string;
+  userID: string;
   orderNumber: string;
   status: OrderStatus;
   totalAmount: number;
@@ -17,7 +17,7 @@ export interface Order {
 
 export interface Interaction {
   id: string;
-  customerID: string;
+  userID: string;
   type: InteractionType;
   subject: string;
   content: string;
@@ -40,7 +40,7 @@ export interface UploadUrl {
 }
 
 // 型定義（union typeを使用）
-export type CustomerStatus = 'ACTIVE' | 'INACTIVE' | 'PROSPECT' | 'ARCHIVED';
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'HOT' | 'COLD' | 'PENDING';
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 
@@ -51,11 +51,12 @@ export type InteractionChannel = 'EMAIL' | 'PHONE' | 'IN_PERSON' | 'VIDEO_CALL' 
 export type InteractionStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
 // 定数オブジェクト
-export const CustomerStatusValues = {
+export const UserStatusValues = {
   ACTIVE: 'ACTIVE' as const,
   INACTIVE: 'INACTIVE' as const,
-  PROSPECT: 'PROSPECT' as const,
-  ARCHIVED: 'ARCHIVED' as const,
+  HOT: 'HOT' as const,
+  COLD: 'COLD' as const,
+  PENDING: 'PENDING' as const,
 } as const;
 
 export const OrderStatusValues = {
@@ -113,19 +114,21 @@ export const GET_AVATAR_UPLOAD_URL = gql`
   }
 `;
 
-export const GET_CUSTOMERS = gql`
-  query GetCustomers($pagination: PaginationInput, $search: String, $status: CustomerStatus) {
-    customers(pagination: $pagination, search: $search, status: $status) {
-      customers {
-        id
-        name
-        email
-        phone
-        company
-        address
+export const GET_USERS = gql`
+  query GetUsers($pagination: PaginationInput, $search: String, $status: UserStatus) {
+    users(pagination: $pagination, search: $search, status: $status) {
+      users {
+        user_id
+        first_name
+        last_name
+        first_name_katakana
+        last_name_katakana
+        email_address
+        role
+        balance
         status
-        createdAt
-        updatedAt
+        created_at
+        updated_at
       }
       pageInfo {
         page
@@ -139,72 +142,70 @@ export const GET_CUSTOMERS = gql`
   }
 `;
 
-export const GET_CUSTOMER = gql`
-  query GetCustomer($id: ID!) {
-    customer(id: $id) {
-      id
-      name
-      email
-      phone
-      company
-      address
+export const GET_USER = gql`
+  query GetUser($user_id: ID!) {
+    user(user_id: $user_id) {
+      user_id
+      first_name
+      last_name
+      first_name_katakana
+      last_name_katakana
+      email_address
+      role
+      balance
       status
-      createdAt
-      updatedAt
-      orders {
-        id
-        orderNumber
-        status
-        totalAmount
+      created_at
+      updated_at
+      wallets {
+        wallet_address
+        balance
         currency
-        orderDate
-      }
-      interactions {
-        id
-        type
-        subject
-        content
         status
-        createdAt
+        created_at
+        updated_at
       }
     }
   }
 `;
 
-export const CREATE_CUSTOMER = gql`
-  mutation CreateCustomer($input: CustomerInput!) {
-    createCustomer(input: $input) {
-      id
-      name
-      email
-      phone
-      company
-      address
+export const CREATE_USER = gql`
+  mutation CreateUser($input: UserInput!) {
+    createUser(input: $input) {
+      user_id
+      first_name
+      last_name
+      first_name_katakana
+      last_name_katakana
+      email_address
+      role
+      balance
       status
-      createdAt
-      updatedAt
+      created_at
+      updated_at
     }
   }
 `;
 
-export const UPDATE_CUSTOMER = gql`
-  mutation UpdateCustomer($id: ID!, $input: CustomerUpdateInput!) {
-    updateCustomer(id: $id, input: $input) {
-      id
-      name
-      email
-      phone
-      company
-      address
+export const UPDATE_USER = gql`
+  mutation UpdateUser($user_id: ID!, $input: UserUpdateInput!) {
+    updateUser(user_id: $user_id, input: $input) {
+      user_id
+      first_name
+      last_name
+      first_name_katakana
+      last_name_katakana
+      email_address
+      role
+      balance
       status
-      createdAt
-      updatedAt
+      created_at
+      updated_at
     }
   }
 `;
 
-export const DELETE_CUSTOMER = gql`
-  mutation DeleteCustomer($id: ID!) {
-    deleteCustomer(id: $id)
+export const DELETE_USER = gql`
+  mutation DeleteUser($user_id: ID!) {
+    deleteUser(user_id: $user_id)
   }
 `;

@@ -128,8 +128,8 @@ func (fas *FirebaseAuthService) SendCustomVerificationEmail(ctx context.Context,
 	subject := fmt.Sprintf("%s様、Narrativesへようこそ！メール認証のお願い", displayName)
 	body := fas.createCustomVerificationEmailBody(displayName, email, temporaryPassword, verificationLink)
 
-	// メール送信
-	if err := emailService.sendEmail(email, subject, body); err != nil {
+	// メール送信（MailServiceの公開メソッドを通じて）
+	if err := emailService.MailService.SendEmail(email, subject, body); err != nil {
 		return err
 	}
 

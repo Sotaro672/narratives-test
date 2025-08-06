@@ -1,28 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection - SNSユーザー（認証されたユーザーは読み書き可能）
-    match /users/{userId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Business Users collection - CRMビジネスユーザー（認証されたユーザーは読み書き可能）
-    match /business_users/{businessUserId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Notifications collection - 認証されたユーザーは読み書き可能
-    match /notifications/{notificationId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Mail collection - 認証されたユーザーは読み書き可能
-    match /mail/{mailId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // その他のコレクション - 認証されたユーザーは読み書き可能
+    // 認証済みユーザーのみ操作可能（デフォルト）
     match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // 管理者権限チェックの関数
+    function isAdmin() {
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/business_users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/business_users/$(request.auth.uid)).data.role in ['admin', 'root']
+      );
+    }
+    
+    // business_usersコレクション（CRMの管理者ユーザー）
+    match /business_users/{userId} {
+      // 認証済みユーザーは読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新は管理者のみ可能
+      allow create, update: if isAdmin();
+      
+      // 削除は管理者のみ可能
+      allow delete: if isAdmin();
+    }
+    
+    // usersコレクション（エンドユーザー）
+    match /users/{userId} {
+      // 認証済みユーザーは読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新・削除は管理者のみ可能
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // walletsコレクション
+    match /wallets/{walletId} {
+      // 認証済みユーザーは読み取り可能
+      allow read: if request.auth != null;
+      
+      // 作成・更新・削除は管理者のみ可能
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // notificationsコレクション
+    match /notifications/{notificationId} {
+      // 認証済みユーザーは読み取り・書き込み可能
+      allow read, write: if request.auth != null;
+    }
+    
+    // mailsコレクション（Firestore Send Email extension用）
+    match /mails/{mailId} {
+      // 認証済みユーザーは読み取り・書き込み可能
       allow read, write: if request.auth != null;
     }
   }

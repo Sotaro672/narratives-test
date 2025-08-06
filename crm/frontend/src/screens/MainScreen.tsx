@@ -19,7 +19,7 @@ const MainScreen: React.FC = () => {
   const [showAuthBody, setShowAuthBody] = useState(false); // AuthBodyの表示状態を管理
   const [showOrganizationBody, setShowOrganizationBody] = useState(false); // OrganizationBodyの表示状態を管理
   const [showNewsBody, setShowNewsBody] = useState(false); // NewsFieldの表示状態を管理
-  const [showCustomerBody, setShowCustomerBody] = useState(false); // CustomerBodyの表示状態を管理
+  const [showUserManagementBody, setShowUserManagementBody] = useState(false); // UserManagementBodyの表示状態を管理
   const [authMode, setAuthMode] = useState<'signin' | 'login'>('signin'); // 認証モードを管理
   const [currentUser, setCurrentUser] = useState<BusinessUserModel | null>(null); // ログインユーザー情報
 
@@ -156,18 +156,17 @@ const MainScreen: React.FC = () => {
   const handleShowOrganization = () => {
     setShowOrganizationBody(true);
     setShowNewsBody(false); // 他の画面を非表示
-    setShowCustomerBody(false);
+    setShowUserManagementBody(false);
   };
 
   const handleShowNews = () => {
     setShowNewsBody(true);
     setShowOrganizationBody(false); // 他の画面を非表示
-    setShowCustomerBody(false);
+    setShowUserManagementBody(false);
   };
 
-  const handleShowCustomer = () => {
-    console.log('handleShowCustomer called - showing user management');
-    setShowCustomerBody(true);
+  const handleShowUserManagement = () => {
+    setShowUserManagementBody(true);
     setShowOrganizationBody(false); // 他の画面を非表示
     setShowNewsBody(false);
   };
@@ -184,7 +183,7 @@ const MainScreen: React.FC = () => {
         onClose={handleSidebarClose} 
         onShowOrganization={handleShowOrganization}
         onShowNews={handleShowNews}
-        onShowCustomer={handleShowCustomer}
+        onShowUser={handleShowUserManagement}
         currentUser={currentUser}
       />
       
@@ -213,7 +212,7 @@ const MainScreen: React.FC = () => {
               <NewsField />
             </div>
           </div>
-        ) : showCustomerBody ? (
+        ) : showUserManagementBody ? (
           <div className="user-body">
             <div className="user-container">
               <div className="user-header">

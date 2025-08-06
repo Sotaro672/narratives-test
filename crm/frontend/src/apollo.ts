@@ -3,7 +3,7 @@ import { setContext } from '@apollo/client/link/context';
 
 // GraphQLサーバーのHTTPリンクを作成
 const httpLink = createHttpLink({
-  uri: 'https://narratives-crm-699392181476-hdgue3uuja-uc.a.run.app/graphql', // CRM専用のCloud RunのGraphQLエンドポイント
+  uri: 'http://localhost:8080/graphql', // ローカル開発用のGraphQLエンドポイント
 });
 
 // 認証用のコンテキストリンク（将来的にFirebase認証トークンを追加可能）
@@ -25,7 +25,7 @@ export const apolloClient = new ApolloClient({
   cache: new InMemoryCache({
     // キャッシュの設定
     typePolicies: {
-      Customer: {
+      User: {
         fields: {
           orders: {
             merge(_existing = [], incoming) {
@@ -41,8 +41,8 @@ export const apolloClient = new ApolloClient({
       },
       Query: {
         fields: {
-          customers: {
-            merge(_existing = { customers: [], pageInfo: {} }, incoming) {
+          users: {
+            merge(_existing = { users: [], pageInfo: {} }, incoming) {
               return incoming;
             },
           },

@@ -7,7 +7,7 @@ interface LeftSidebarProps {
   onClose: () => void;
   onShowOrganization?: () => void;
   onShowNews?: () => void;
-  onShowCustomer?: () => void;
+  onShowUser?: () => void;
   currentUser?: BusinessUserModel | null;
 }
 
@@ -20,7 +20,7 @@ interface MenuItem {
   isComingSoon?: boolean;
 }
 
-const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, onClose, onShowOrganization, onShowNews, onShowCustomer, currentUser }) => {
+const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, onClose, onShowOrganization, onShowNews, onShowUser, currentUser }) => {
   const menuItems: MenuItem[] = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard', isActive: true },
     { id: 'news', icon: '📰', label: 'ニュース' },
@@ -43,16 +43,14 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ isOpen, onClose, onShowOrgani
   ];
 
   const handleMenuItemClick = (item: MenuItem) => {
-    console.log('Menu item clicked:', item.id, item.label);
     if (item.id === 'organization' && onShowOrganization) {
       onShowOrganization();
       onClose();
     } else if (item.id === 'news' && onShowNews) {
       onShowNews();
       onClose();
-    } else if (item.id === 'users' && onShowCustomer) {
-      console.log('Users menu clicked, calling onShowCustomer');
-      onShowCustomer();
+    } else if (item.id === 'users' && onShowUser) {
+      onShowUser();
       onClose();
     } else if (item.isComingSoon) {
       alert(`${item.label} feature is coming soon!`);

@@ -36,15 +36,10 @@ type BusinessUserData struct {
 	BusinessUserID    string    `firestore:"business_user_id"`
 	FirstName         string    `firestore:"first_name"`
 	LastName          string    `firestore:"last_name"`
-	FirstNameKatakana string    `firestore:"first_name_katakana"`
-	LastNameKatakana  string    `firestore:"last_name_katakana"`
 	EmailAddress      string    `firestore:"email_address"`
 	Role              string    `firestore:"role"`
 	TemporaryPassword *string   `firestore:"temporary_password"`
-	Balance           float64   `firestore:"balance"`
-	Status            string    `firestore:"status"`
 	CreatedAt         time.Time `firestore:"created_at"`
-	UpdatedAt         time.Time `firestore:"updated_at"`
 }
 
 // NewNotificationWatcher 通知監視サービスのコンストラクタ
@@ -124,10 +119,10 @@ func (nw *NotificationWatcher) processUnprocessedNotifications(ctx context.Conte
 
 // processWelcomeEmailNotification 招待メール通知を処理
 func (nw *NotificationWatcher) processWelcomeEmailNotification(ctx context.Context, docID string, notification *NotificationData) error {
-	// ユーザー情報を取得（usersコレクションから）
-	userDoc, err := nw.client.Collection("users").Doc(notification.BusinessUserID).Get(ctx)
+	// ビジネスユーザー情報を取得
+	userDoc, err := nw.client.Collection("business_users").Doc(notification.BusinessUserID).Get(ctx)
 	if err != nil {
-		return fmt.Errorf("ユーザー情報取得エラー: %v", err)
+		return fmt.Errorf("ビジネスユーザー情報取得エラー: %v", err)
 	}
 
 	var businessUserData BusinessUserData
@@ -141,31 +136,65 @@ func (nw *NotificationWatcher) processWelcomeEmailNotification(ctx context.Conte
 		return nw.markNotificationAsProcessed(ctx, docID)
 	}
 
-	// Firebase認証付きカスタムメールを送信
+	// Firestore Send Email拡張機能を使用してメールを送信
 	displayName := fmt.Sprintf("%s %s", businessUserData.LastName, businessUserData.FirstName)
-	if err := nw.firebaseAuthService.SendCustomVerificationEmail(
-		ctx,
-		businessUserData.EmailAddress,
-		displayName,
-		*businessUserData.TemporaryPassword,
-		nw.emailService,
-	); err != nil {
-		// Firebase認証メールが失敗した場合は、通常のウェルカムメールを送信
-		log.Printf("Firebase認証メール送信失敗、通常メールを送信します: %v", err)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "https://narratives-crm-site.web.app"
+	}
 
-		emailData := WelcomeEmailData{
-			RecipientEmail:    businessUserData.EmailAddress,
-			RecipientName:     displayName,
-			TemporaryPassword: *businessUserData.TemporaryPassword,
-			Role:              businessUserData.Role,
-			LoginURL:          getLoginURL(),
-		}
+	// メールドキュメントを作成
+	mailData := map[string]interface{}{
+		"to":      []string{businessUserData.EmailAddress},
+		"from":    "caotailangaogang@gmail.com",
+		"subject": "【Narratives CRM】アカウント作成完了のお知らせ",
+		"html": fmt.Sprintf(`
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+				<h2 style="color: #2563eb;">Narratives CRMへようこそ</h2>
+				
+				<p>%s様</p>
+				
+				<p>Narratives CRMのアカウントが正常に作成されました。以下の情報でログインしてください。</p>
+				
+				<div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+					<h3 style="margin-top: 0; color: #374151;">ログイン情報</h3>
+					<p><strong>メールアドレス:</strong> %s</p>
+					<p><strong>一時パスワード:</strong> <code style="background-color: #e5e7eb; padding: 2px 4px; border-radius: 4px;">%s</code></p>
+				</div>
+				
+				<p style="margin: 30px 0;">
+					<a href="%s" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">ログインページへ</a>
+				</p>
+				
+				<div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px; color: #6b7280; font-size: 14px;">
+					<p><strong>重要なお知らせ:</strong></p>
+					<ul>
+						<li>初回ログイン後、必ずパスワードを変更してください</li>
+						<li>このメールに記載されている一時パスワードは第三者に共有しないでください</li>
+						<li>ご不明な点がございましたら、システム管理者までお問い合わせください</li>
+					</ul>
+				</div>
+				
+				<p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+					このメールは自動送信されています。返信の必要はありません。
+				</p>
+			</div>
+		`, displayName, businessUserData.EmailAddress, *businessUserData.TemporaryPassword, frontendURL),
+		"delivery": map[string]interface{}{
+			"startTime": time.Now(),
+			"endTime":   time.Now().Add(24 * time.Hour),
+		},
+	}
 
-		// ビジネスユーザーIDを通知の所有者IDに設定してメール履歴を保存
-		if err := nw.emailService.SendWelcomeEmail(ctx, emailData, notification.BusinessUserID); err != nil {
-			return fmt.Errorf("メール送信エラー: %v", err)
-		}
-	} // 通知を処理済みにマーク
+	// mailsコレクションにドキュメントを追加（Firestore拡張機能が自動処理）
+	_, _, err = nw.client.Collection("mails").Add(ctx, mailData)
+	if err != nil {
+		return fmt.Errorf("メールドキュメント作成エラー: %v", err)
+	}
+
+	log.Printf("メールドキュメント作成完了 (ビジネスユーザー: %s)", displayName)
+
+	// 通知を処理済みにマーク
 	return nw.markNotificationAsProcessed(ctx, docID)
 }
 
@@ -270,15 +299,4 @@ func (nw *NotificationWatcher) ProcessAllUnprocessedNotifications(ctx context.Co
 
 	log.Printf("手動処理完了: %d件の通知を処理しました", processedCount)
 	return processedCount, nil
-}
-
-// getLoginURL 環境に応じたログインURLを取得
-func getLoginURL() string {
-	// 環境変数から取得、なければデフォルト値
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		// 開発環境のデフォルト
-		frontendURL = "http://localhost:5173"
-	}
-	return frontendURL + "/login"
 }

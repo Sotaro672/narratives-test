@@ -8,7 +8,7 @@ import './UserManagement.css';
 const CRM_API_BASE_URL = 'https://narratives-crm-699392181476-hdgue3uuja-uc.a.run.app';
 
 // Development proxy endpoint (for local testing only)
-const isDevelopment = import.meta.env?.DEV || false;
+const isDevelopment = import.meta.env.DEV;
 
 // Production: CRM Backend base URL (GraphQL endpoint is at /graphql)
 const API_BASE_URL = CRM_API_BASE_URL;
@@ -33,8 +33,8 @@ const INTROSPECTION_QUERY = `
 
 // GraphQL クエリ定義 - usersとwalletsテーブルを取得
 const GET_USERS_AND_WALLETS_QUERY = `
-  query GetUsersAndWallets {
-    users(pagination: {limit: 10}) {
+  query GetUsersAndWallets($pagination: PaginationInput) {
+    users(pagination: $pagination) {
       users {
         user_id
         first_name
@@ -47,25 +47,14 @@ const GET_USERS_AND_WALLETS_QUERY = `
         status
         created_at
         updated_at
-      }
-      pageInfo {
-        page
-        limit
-        total
-        pages
-        hasNext
-        hasPrev
-      }
-    }
-    wallets(pagination: {limit: 10}) {
-      wallets {
-        wallet_address
-        user_id
-        balance
-        currency
-        status
-        created_at
-        updated_at
+        wallets {
+          wallet_address
+          balance
+          currency
+          status
+          created_at
+          updated_at
+        }
       }
       pageInfo {
         page
@@ -80,14 +69,17 @@ const GET_USERS_AND_WALLETS_QUERY = `
 `;
 
 // GraphQL リクエスト関数
-const executeGraphQLQuery = async (query: string, token: string) => {
+const executeGraphQLQuery = async (query: string, token: string, variables?: any) => {
   const response = await fetch(`${API_BASE_URL}/graphql`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ query })
+    body: JSON.stringify({ 
+      query,
+      variables: variables || {}
+    })
   });
   
   if (!response.ok) {
@@ -145,7 +137,7 @@ interface WalletData {
   updated_at?: any;
 }
 
-const UserManagement: React.FC = () => {
+const WalletManagement: React.FC = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -492,13 +484,22 @@ ${availableFields.map((field: string) => `• ${field}`).join('\n')}
         }
       }
       
-      // GraphQL クエリでusersとwalletsデータを一度に取得
-      console.log('✅ "users" field found! Fetching users and wallets via GraphQL...');
-      const combinedData = await executeGraphQLQuery(GET_USERS_AND_WALLETS_QUERY, crmIdToken);
+      // GraphQL クエリでusersデータを取得（walletsは各userのリレーションとして含まれる）
+      console.log('✅ "users" field found! Fetching users with wallets via GraphQL...');
+      const variables = {
+        pagination: {
+          page: 1,
+          limit: 100,
+          sortBy: "created_at",
+          sortOrder: "DESC"
+        }
+      };
+      const combinedData = await executeGraphQLQuery(GET_USERS_AND_WALLETS_QUERY, crmIdToken, variables);
       console.log('Combined GraphQL response:', combinedData);
       
-      // usersデータを処理 (UserConnectionからusersフィールドを取得)
-      const usersList: UserData[] = Array.isArray(combinedData.users?.users) ? combinedData.users.users.map((user: any) => ({
+      // usersデータを処理（UserConnectionからusersを抽出）
+      const usersResult = combinedData.users;
+      const usersList: UserData[] = Array.isArray(usersResult?.users) ? usersResult.users.map((user: any) => ({
         user_id: user.user_id || '',
         first_name: user.first_name || '',
         last_name: user.last_name || '',
@@ -514,16 +515,25 @@ ${availableFields.map((field: string) => `• ${field}`).join('\n')}
       
       console.log('Users list processed:', usersList.length, 'users');
 
-      // walletsデータを処理 (WalletConnectionからwalletsフィールドを取得)
-      const walletsList: WalletData[] = Array.isArray(combinedData.wallets?.wallets) ? combinedData.wallets.wallets.map((wallet: any) => ({
-        wallet_address: wallet.wallet_address || '',
-        user_id: wallet.user_id || '',
-        balance: wallet.balance || 0,
-        currency: wallet.currency || 'JPY',
-        status: wallet.status || 'active',
-        created_at: wallet.created_at || null,
-        updated_at: wallet.updated_at || null
-      })) : [];
+      // walletsデータを処理（各userのwalletsリレーションから展開）
+      const walletsList: WalletData[] = [];
+      if (Array.isArray(usersResult?.users)) {
+        usersResult.users.forEach((user: any) => {
+          if (Array.isArray(user.wallets)) {
+            user.wallets.forEach((wallet: any) => {
+              walletsList.push({
+                wallet_address: wallet.wallet_address || '',
+                user_id: user.user_id || '',
+                balance: wallet.balance || 0,
+                currency: wallet.currency || 'JPY',
+                status: wallet.status || 'active',
+                created_at: wallet.created_at || null,
+                updated_at: wallet.updated_at || null
+              });
+            });
+          }
+        });
+      }
       
       console.log('Wallets list processed:', walletsList.length, 'wallets');
 
@@ -776,4 +786,4 @@ ${availableFields.map((field: string) => `• ${field}`).join('\n')}
   );
 };
 
-export default UserManagement;
+export default WalletManagement;
