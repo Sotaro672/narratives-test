@@ -7,7 +7,6 @@ import OrganizationBody from '../widgets/OrganizationBody';
 import NewsField from '../widgets/NewsField';
 import UserManagement from '../widgets/UserManagement';
 import BusinessUserModel from '../models/BusinessUsers';
-import type { UnifiedUserModel } from '../models/UnifiedUser';
 import { logoutUser } from '../services/authService';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { crmDb } from '../config/firebase'; // CRM Firestoreを使用
@@ -92,17 +91,15 @@ const MainScreen: React.FC = () => {
     setShowAuthBody(true);
   };
 
-  const handleAuthSuccess = async (user?: BusinessUserModel | UnifiedUserModel) => {
+  const handleAuthSuccess = async (user?: BusinessUserModel) => {
     setIsLoggedIn(true);
     setShowAuthBody(false);
     if (user) {
-      // BusinessUserModelの場合
-      if (user instanceof BusinessUserModel) {
-        console.log('User authenticated:', user.getFullName(), user.getFullNameKatakana());
-        console.log('Initial user belongTo:', user.belongTo);
-        
-        // まず現在のユーザー情報を設定
-        setCurrentUser(user);
+      console.log('User authenticated:', user.getFullName(), user.getFullNameKatakana());
+      console.log('Initial user belongTo:', user.belongTo);
+      
+      // まず現在のユーザー情報を設定
+      setCurrentUser(user);
         
         // ログイン後すぐにユーザー情報を更新（belong_toフィールドを確認・追加）
         try {
@@ -138,13 +135,6 @@ const MainScreen: React.FC = () => {
         }
       } catch (error) {
         console.error('Error updating user info after login:', error);
-      }
-      } else {
-        // UnifiedUserModelの場合（統合認証）
-        console.log('Unified user authenticated:', user.email);
-        // UnifiedUserModelの場合は直接設定
-        // 注: 現在のUI設計上、BusinessUserModelが必要なのでここでは基本的な対応のみ
-        console.log('UnifiedUserModel received but BusinessUserModel expected for UI');
       }
     }
   };

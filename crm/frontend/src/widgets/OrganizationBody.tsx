@@ -8,7 +8,8 @@ import AddMemberForm from './AddMemberForm';
 import type { MemberFormData } from './AddMemberForm';
 import MemberManagement from './MemberManagement';
 import BrandManagement from './BrandManagement';
-import EmailService from '../services/emailService';
+import EmailService from '../services/authenticationEmailService';
+import { debugCurrentUserPermissions, testFirestoreRules } from '../utils/debugPermissions';
 import './OrganizationBody.css';
 
 interface OrganizationBodyProps {
@@ -253,6 +254,11 @@ const OrganizationBody: React.FC<OrganizationBodyProps> = ({ currentUser, onComp
     console.log('handleCreateCompany called');
     console.log('currentUser:', currentUser);
     console.log('companyData:', companyData);
+    
+    // デバッグ: ユーザー権限を確認
+    console.log('DEBUG: Starting user permissions check...');
+    await debugCurrentUserPermissions();
+    await testFirestoreRules();
     
     setIsLoading(true);
 

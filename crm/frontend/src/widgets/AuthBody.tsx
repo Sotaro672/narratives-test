@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { BusinessUserModel } from '../models/BusinessUsers';
-import type { UnifiedUserModel } from '../models/UnifiedUser';
-import { createUnifiedUserAccount, signInUnifiedUser } from '../services/unifiedAuthService';
+import { createUserAccount, loginUser } from '../services/authService';
+import { AuthenticationEmailService } from '../services/authenticationEmailService';
+import { getCurrentUser } from '../services/authService';
+import { sendEmailVerification } from 'firebase/auth';
 import './AuthBody.css';
 
 interface AuthBodyProps {
-  onAuthSuccess: (user?: BusinessUserModel | UnifiedUserModel) => void;
+  onAuthSuccess: (user?: BusinessUserModel) => void;
   onCancel: () => void;
   initialMode?: 'signin' | 'login';
 }
@@ -60,78 +62,111 @@ const AuthBody: React.FC<AuthBodyProps> = ({ onAuthSuccess, onCancel, initialMod
 
     try {
       if (isLogin) {
-        // ログインの場合（統合認証）
-        const result = await signInUnifiedUser(formData.email, formData.password);
+        // ログインの場合
+        const result = await loginUser(formData.email, formData.password);
         
         if (result.success && result.user) {
-          // CRMアクセス権限をチェック
-          if (!result.user.permissions.crm) {
-            alert('CRMへのアクセス権限がありません');
-            return;
-          }
-
-          console.log('Login successful:', result.user.email);
+          console.log('Login successful:', result.user.emailAddress);
           
-          // BusinessUserModelとして互換性を保つ
-          if (result.user.crmProfile) {
-            const businessUser = new BusinessUserModel({
-              userId: result.user.userId,
-              firstName: result.user.crmProfile.firstName,
-              firstNameKatakana: result.user.crmProfile.firstNameKatakana,
-              lastName: result.user.crmProfile.lastName,
-              lastNameKatakana: result.user.crmProfile.lastNameKatakana,
-              emailAddress: result.user.email,
-              emailVerified: result.user.crmProfile.emailVerified,
-              role: result.user.crmProfile.role,
-              status: result.user.crmProfile.status,
-              belongTo: result.user.crmProfile.belongTo,
-              createdAt: result.user.createdAt,
-              updatedAt: result.user.updatedAt
-            });
-            onAuthSuccess(businessUser);
-          } else {
-            onAuthSuccess(result.user);
+          // メール認証が必要かチェック
+          const currentUser = getCurrentUser();
+          if (currentUser && !currentUser.emailVerified) {
+            console.log('User email not verified:', currentUser.email);
+            // 通常のサインイン時には認証メールを自動送信しない
+            // 必要な場合は「メール認証を再送信」ボタンを表示して、ユーザーが自分でアクションを起こせるようにする
+            alert('メール認証が完了していません。認証メールの再送信が必要な場合は、プロフィール画面から実行してください。');
           }
+          
+          onAuthSuccess(result.user);
         } else {
           alert(result.error || 'ログインに失敗しました');
         }
       } else {
-        // サインインの場合（新規ユーザー作成）
-        const result = await createUnifiedUserAccount({
+        // サインイン（新規ユーザー作成）の場合
+        const result = await createUserAccount({
           email: formData.email,
           password: formData.password,
           firstName: formData.firstName,
           firstNameKatakana: formData.firstNameKatakana,
           lastName: formData.lastName,
           lastNameKatakana: formData.lastNameKatakana,
-          role: formData.role,
-          enableCrm: true,  // CRMアクセス有効
-          enableSns: false  // SNSアクセスは無効（必要に応じて後で有効化）
+          role: formData.role
         });
         
         if (result.success && result.user) {
-          console.log('Sign in successful:', result.user.email);
+          console.log('Sign in successful:', result.user.emailAddress);
           
-          // BusinessUserModelとして互換性を保つ
-          if (result.user.crmProfile) {
-            const businessUser = new BusinessUserModel({
-              userId: result.user.userId,
-              firstName: result.user.crmProfile.firstName,
-              firstNameKatakana: result.user.crmProfile.firstNameKatakana,
-              lastName: result.user.crmProfile.lastName,
-              lastNameKatakana: result.user.crmProfile.lastNameKatakana,
-              emailAddress: result.user.email,
-              emailVerified: result.user.crmProfile.emailVerified,
-              role: result.user.crmProfile.role,
-              status: result.user.crmProfile.status,
-              belongTo: result.user.crmProfile.belongTo,
-              createdAt: result.user.createdAt,
-              updatedAt: result.user.updatedAt
+          // ユーザー作成成功後、Firebase標準とカスタム認証メールを送信
+          try {
+            const currentUser = getCurrentUser();
+            console.log('Current user after signup:', currentUser ? currentUser.email : 'No user');
+            console.log('Temporary password from result:', result.temporaryPassword);
+            
+            if (currentUser) {
+              // Firebase標準の認証メールを送信
+              try {
+                await sendEmailVerification(currentUser, {
+                  url: 'https://narratives-crm-site.web.app/auth/verify',
+                  handleCodeInApp: true
+                });
+                console.log('Firebase standard verification email sent successfully');
+              } catch (firebaseEmailError) {
+                console.error('Firebase standard email failed:', firebaseEmailError);
+                console.error('Firebase email error details:', {
+                  code: (firebaseEmailError as any).code,
+                  message: (firebaseEmailError as any).message
+                });
+              }
+              
+              // カスタム認証メールも送信
+              try {
+                if (result.temporaryPassword) {
+                  // 一時パスワードとメールアドレスを含むカスタム認証メールを送信
+                  await AuthenticationEmailService.sendAuthenticationEmailWithCredentials(
+                    currentUser, 
+                    true, // 初回サインアップ
+                    result.temporaryPassword,
+                    formData.email
+                  );
+                  console.log('Custom authentication email with credentials sent successfully');
+                } else {
+                  await AuthenticationEmailService.sendAuthenticationEmail(currentUser, true); // 初回サインアップ
+                  console.log('Custom authentication email sent successfully');
+                }
+              } catch (customEmailError) {
+                console.error('Custom email failed:', customEmailError);
+                console.error('Custom email error details:', {
+                  code: (customEmailError as any).code,
+                  message: (customEmailError as any).message,
+                  stack: (customEmailError as any).stack
+                });
+              }
+              
+              alert('アカウントが作成されました。Firebase標準メールとカスタムメールの両方の送信を試行しました。コンソールでエラーを確認してください。');
+              
+              // メール送信完了後にサインアウト（管理者の代理作成を防ぐため）
+              try {
+                await import('../services/authService').then(({ logoutUser }) => logoutUser());
+                console.log('User signed out after email sending');
+              } catch (signOutError) {
+                console.error('Error signing out after email:', signOutError);
+              }
+            } else {
+              console.error('No current user found after account creation');
+              alert('アカウントは作成されましたが、ユーザー情報を取得できませんでした。');
+            }
+          } catch (emailError) {
+            console.error('Failed to send authentication emails:', emailError);
+            console.error('General email error details:', {
+              code: (emailError as any).code,
+              message: (emailError as any).message,
+              stack: (emailError as any).stack
             });
-            onAuthSuccess(businessUser);
-          } else {
-            onAuthSuccess(result.user);
+            // メール送信失敗してもアカウント作成は成功しているので、警告として表示
+            alert(`アカウントは作成されましたが、認証メールの送信に失敗しました。エラー: ${(emailError as any).message}`);
           }
+          
+          onAuthSuccess(result.user);
         } else {
           alert(result.error || 'アカウント作成に失敗しました');
         }

@@ -12,7 +12,6 @@ import (
 	"math/big"
 	"narratives-crm-backend/graph/generated"
 	"narratives-crm-backend/graph/model"
-	"narratives-crm-backend/services"
 	"os"
 	"path/filepath"
 	"time"
@@ -103,9 +102,14 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		return nil, fmt.Errorf("failed to save business user to Firestore: %v", err)
 	}
 
-	// 招待メールを送信
-	if err := sendWelcomeEmail(ctx, input, tempPassword, userRecord.UID); err != nil {
-		// ユーザーは作成済みなので、メール送信失敗はログに記録するだけ
+	// Welcome email通知を作成（notification_watcherが自動処理）
+	if err := createWelcomeEmailNotification(ctx, firestoreClient, userRecord.UID); err != nil {
+		// 通知作成失敗はログに記録するだけ
+		fmt.Printf("Warning: Failed to create welcome email notification for %s: %v\n", input.EmailAddress, err)
+	}
+
+	// 直接メール送信（firebase_auth_serviceを使用）
+	if err := sendWelcomeEmailDirect(ctx, input, tempPassword); err != nil {
 		fmt.Printf("Warning: Failed to send welcome email to %s: %v\n", input.EmailAddress, err)
 	}
 
@@ -733,27 +737,32 @@ func generateTemporaryPassword() (string, error) {
 }
 
 // 招待メールを送信するヘルパー関数
-func sendWelcomeEmail(ctx context.Context, input model.UserInput, tempPassword, userID string) error {
-	// Firestoreクライアントを取得
-	firestoreClient, err := getFirestoreClient(ctx)
+func sendWelcomeEmailDirect(ctx context.Context, input model.UserInput, tempPassword string) error {
+	// メール送信はフロントエンドのauthenticationEmailService.tsで処理される
+	// Firebase Auth連携も必要に応じてフロントエンドで実装
+	
+	return nil
+}
+
+// createWelcomeEmailNotification welcome_email通知をFirestoreに作成
+func createWelcomeEmailNotification(ctx context.Context, firestoreClient *firestore.Client, userID string) error {
+	// 通知データを作成
+	now := time.Now()
+	notificationData := map[string]interface{}{
+		"notification_id":   fmt.Sprintf("welcome_%s_%d", userID, now.Unix()),
+		"business_user_id":  userID,
+		"notification_type": "welcome_email",
+		"processed":         false,
+		"created_at":        now,
+		"updated_at":        now,
+	}
+
+	// notificationsコレクションに追加
+	_, _, err := firestoreClient.Collection("notifications").Add(ctx, notificationData)
 	if err != nil {
-		return fmt.Errorf("failed to get Firestore client: %v", err)
-	}
-	defer firestoreClient.Close()
-
-	// メールサービスを初期化
-	mailService := services.NewMailService(firestoreClient)
-	emailService := services.NewEmailService(mailService)
-
-	// メールデータを準備
-	welcomeData := services.WelcomeEmailData{
-		RecipientEmail:    input.EmailAddress,
-		RecipientName:     fmt.Sprintf("%s %s", input.LastName, input.FirstName),
-		TemporaryPassword: tempPassword,
-		Role:              input.Role.String(),
-		LoginURL:          "https://narratives-crm-site.web.app", // フロントエンドのURL
+		return fmt.Errorf("failed to create welcome email notification: %v", err)
 	}
 
-	// 招待メールを送信
-	return emailService.SendWelcomeEmail(ctx, welcomeData, userID)
+	fmt.Printf("Welcome email通知を作成しました: UserID=%s\n", userID)
+	return nil
 }

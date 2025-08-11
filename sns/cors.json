@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["http://localhost:*", "https://narratives-test-64976.web.app", "https://narratives-test-64976.firebaseapp.com", "https://narratives-sns-site.web.app", "https://narratives-sns-site.firebaseapp.com"],
+    "origin": ["https://narratives-sns-site.web.app", "https://narratives-sns-site.firebaseapp.com", "http://localhost:*"],
     "method": ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
     "responseHeader": ["Content-Type", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Authorization"],
     "maxAgeSeconds": 3600

@@ -49,7 +49,7 @@ gcloud run deploy $SERVICE_NAME `
   SMTP_HOST=smtp.gmail.com,
   SMTP_PORT=465,
   SMTP_USER=caotailangaogang@gmail.com,
-  SMTP_PASSWORD=bwrehdfipryggpnv,
+  SMTP_PASSWORD=volwwbdcfwpyzvod,
   FROM_EMAIL=caotailangaogang@gmail.com,
   FROM_NAME=Narratives CRM System,
   FRONTEND_URL=https://narratives-crm-site.web.app"

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Email Test</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+</head>
+<body>
+    <h1>Firebase Email Test</h1>
+    <button onclick="sendTestEmail()">Send Test Email</button>
+    
+    <script>
+        // Firebase設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxzVGjgYx2-Qk-8nQ7HV2Q6ZwJ0d0XyYY",
+            authDomain: "narratives-test-64976.firebaseapp.com",
+            projectId: "narratives-test-64976",
+            storageBucket: "narratives-test-64976.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+        
+        // Firebase初期化
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        async function sendTestEmail() {
+            try {
+                const testEmailData = {
+                    to: ['your-test-email@gmail.com'], // テスト用メールアドレスに変更
+                    message: {
+                        subject: 'Firebase Extensions テストメール',
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                                <h2 style="color: #333;">テストメール送信成功！</h2>
+                                <p>Firebase Extensions の Trigger Email from Firestore が正常に動作しています。</p>
+                                <p>送信時間: ${new Date().toLocaleString()}</p>
+                            </div>
+                        `,
+                        text: 'Firebase Extensions テストメール送信成功！'
+                    },
+                    attachments: []
+                };
+                
+                // mailsコレクションに追加
+                await db.collection('mails').add(testEmailData);
+                alert('テストメールを送信しました。受信を確認してください。');
+                
+            } catch (error) {
+                console.error('Error sending test email:', error);
+                alert('テストメール送信に失敗しました: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

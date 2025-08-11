@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BusinessUserModel } from '../models/BusinessUsers';
 import NotificationModel from '../models/Notifications';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { crmDb } from '../config/firebase'; // CRM Firestoreを使用
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { crmDb, crmAuth } from '../config/firebase'; // CRM Firestoreを使用
 import PasswordChangeModal from '../components/PasswordChangeModal';
 import './Header.css';
 import './Notifications.css';
@@ -25,6 +26,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen, isLoggedIn
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const [firebaseAuthUser, setFirebaseAuthUser] = useState<User | null>(null);
+  const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
 
   const handlePasswordChange = () => {
     setIsPasswordChangeModalOpen(true);
@@ -94,6 +97,19 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen, isLoggedIn
       setCompanyName(null);
     }
   }, [isLoggedIn, currentUser]);
+
+  // Firebase認証状態を監視
+  useEffect(() => {
+    console.log('Setting up Firebase Auth state listener...');
+    const unsubscribe = onAuthStateChanged(crmAuth, (user) => {
+      console.log('Firebase Auth state changed in Header:', user?.uid || 'null');
+      console.log('Firebase Auth user email:', user?.email);
+      setFirebaseAuthUser(user);
+      setFirebaseAuthReady(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleUserNameClick = () => {
     setIsAdminBarOpen(!isAdminBarOpen);
@@ -253,15 +269,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen, isLoggedIn
     };
   }, [isNotificationsOpen]);
 
-  // ユーザーがログインしたら通知を取得
+  // ユーザーがログインしたら通知を取得（Firebase認証状態を確認）
   useEffect(() => {
     let notificationsUnsubscribe: (() => void) | null = null;
     
-    if (isLoggedIn && currentUser && currentUser.userId) {
-      console.log('===== User logged in, setting up notifications listener =====');
+    // Firebase認証が準備完了かつユーザーがログインしている場合のみ通知を取得
+    if (firebaseAuthReady && isLoggedIn && currentUser && currentUser.userId && firebaseAuthUser) {
+      console.log('===== User logged in and Firebase Auth ready, setting up notifications listener =====');
       console.log('Current user object:', currentUser);
       console.log('Current user ID:', currentUser.userId);
-      console.log('Current user ID type:', typeof currentUser.userId);
+      console.log('Firebase Auth user ID:', firebaseAuthUser.uid);
+      console.log('Firebase Auth user email:', firebaseAuthUser.email);
       
       // ユーザーIDが有効な文字列であることを確認
       if (typeof currentUser.userId === 'string' && currentUser.userId.trim() !== '') {
@@ -271,9 +289,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen, isLoggedIn
         console.error('Invalid user ID for notifications:', currentUser.userId);
       }
     } else {
-      console.log('User not logged in or no current user, no notifications to fetch');
+      console.log('Waiting for Firebase Auth or user not logged in');
+      console.log('firebaseAuthReady:', firebaseAuthReady);
       console.log('isLoggedIn:', isLoggedIn);
       console.log('currentUser:', currentUser);
+      console.log('firebaseAuthUser:', firebaseAuthUser?.uid || 'null');
     }
     
     return () => {
@@ -282,7 +302,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen, isLoggedIn
         notificationsUnsubscribe();
       }
     };
-  }, [isLoggedIn, currentUser]);
+  }, [isLoggedIn, currentUser, firebaseAuthReady, firebaseAuthUser]);
 
   return (
     <>

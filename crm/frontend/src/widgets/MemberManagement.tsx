@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { crmDb, crmAuth } from '../config/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import BusinessUserModel from '../models/BusinessUsers';
-import { EmailService } from '../services/emailService';
+import { EmailService } from '../services/authenticationEmailService';
 import { deleteUserFromAuth } from '../services/authService';
 import './MemberManagement.css';
 

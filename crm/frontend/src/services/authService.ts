@@ -20,7 +20,20 @@ export interface AuthResult {
   user?: BusinessUserModel;
   error?: string;
   requiresPasswordChange?: boolean;
+  temporaryPassword?: string; // 一時パスワードを追加
 }
+
+/**
+ * 一時パスワード生成
+ */
+const generateTemporaryPassword = (): string => {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 12; i++) {
+    result += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return result;
+};
 
 /**
  * Sign Inでユーザーを新規作成してFirestoreに保存
@@ -35,14 +48,21 @@ export const createUserAccount = async (userData: {
   role?: string;
 }): Promise<AuthResult> => {
   try {
-    // Firebase Authenticationでユーザー作成
+    console.log('Creating user account for:', userData.email);
+    
+    // 一時パスワードを生成
+    const temporaryPassword = generateTemporaryPassword();
+    console.log('Generated temporary password:', temporaryPassword);
+    
+    // Firebase Authenticationでユーザー作成（一時パスワードを使用）
     const userCredential = await createUserWithEmailAndPassword(
       crmAuth, 
       userData.email, 
-      userData.password
+      temporaryPassword // 一時パスワードを使用
     );
     
     const firebaseUser = userCredential.user;
+    console.log('Firebase user created:', firebaseUser.uid, firebaseUser.email);
 
     // BusinessUserModelインスタンス作成
     const newUser = new BusinessUserModel({
@@ -61,7 +81,7 @@ export const createUserAccount = async (userData: {
     });
 
     // Firestoreにユーザー情報を保存（business_usersコレクション）
-    await setDoc(doc(crmDb, 'business_users', firebaseUser.uid), {
+    const firestoreData = {
       user_id: newUser.userId,
       first_name: newUser.firstName,
       first_name_katakana: newUser.firstNameKatakana,
@@ -72,16 +92,30 @@ export const createUserAccount = async (userData: {
       role: newUser.role,
       status: newUser.status,
       belong_to: newUser.belongTo,
+      temporary_password: temporaryPassword, // 一時パスワードを保存
+      requires_password_change: true, // パスワード変更要求フラグ
       created_at: serverTimestamp(),
       updated_at: serverTimestamp()
-    });
+    };
+    
+    console.log('Saving user data to Firestore:', firestoreData);
+    
+    await setDoc(doc(crmDb, 'business_users', firebaseUser.uid), firestoreData);
 
     console.log('User created and saved to Firestore:', newUser.getFullName());
     
-    return {
+    // ユーザー作成後、一旦サインアウトしない（認証メール送信のため）
+    // await signOut(crmAuth); // この行をコメントアウト
+    
+    const result = {
       success: true,
-      user: newUser
+      user: newUser,
+      temporaryPassword: temporaryPassword // 一時パスワードを返す
     };
+    
+    console.log('Returning auth result:', { ...result, temporaryPassword: '[REDACTED]' });
+    
+    return result;
     
   } catch (error: any) {
     console.error('Error creating user account:', error);
@@ -395,7 +429,7 @@ export const deleteUserFromAuth = async (email: string): Promise<{success: boole
   try {
     // バックエンドURLの設定 - バックエンドが存在しない場合は、代替手段としてFirebaseユーザーは削除せず成功とする
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://narratives-crm-699392181476-221090465383.us-central1.run.app'  // Cloud Run URL
+      ? 'https://narratives-crm-699392181476-us-central1.run.app'  // Cloud Run URL
       : 'http://localhost:8080';
       
     console.log('Deleting user from Firebase Auth:', email, 'using backend:', backendUrl);

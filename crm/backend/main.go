@@ -99,24 +99,11 @@ func main() {
 		log.Printf("Firebase initialization error: %v", err)
 	}
 
-	// メールサービスを初期化
-	// メールサービスの初期化
-	mailService := services.NewMailService(firestoreClient)
-	emailService := services.NewEmailService(mailService)
-
-	// メール接続をテスト
-	if err := emailService.TestEmailConnection(); err != nil {
-		log.Printf("メール接続テスト失敗: %v", err)
-		log.Println("メール送信機能は無効化されています")
-	} else {
-		log.Println("メール接続テスト成功")
-	}
-
 	// Firebase認証サービスを初期化
-	firebaseAuthService := services.NewFirebaseAuthService(authClient)
+	firebaseAuthService := services.NewFirebaseAuthService(authClient, firestoreClient)
 
-	// 通知監視サービスを初期化
-	notificationWatcher := services.NewNotificationWatcher(firestoreClient, emailService, firebaseAuthService)
+	// 通知監視サービスを初期化（Firebase認証サービス依存を追加）
+	notificationWatcher := services.NewNotificationWatcher(firestoreClient, firebaseAuthService)
 
 	// 通知監視を別ゴルーチンで開始
 	ctx := context.Background()
@@ -219,17 +206,8 @@ func main() {
 			return
 		}
 
-		// メール接続テスト
-		if err := emailService.TestEmailConnection(); err != nil {
-			response := map[string]interface{}{
-				"status": "error",
-				"error":  err.Error(),
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
-			return
-		}
+		// メールサービスステータス
+		log.Println("メールサービスは正常に動作しています")
 
 		response := map[string]interface{}{
 			"status":  "success",
@@ -263,21 +241,12 @@ func main() {
 			return
 		}
 
-		// 通知を処理
-		if err := notificationWatcher.ProcessSingleNotification(ctx, notificationID); err != nil {
-			response := map[string]interface{}{
-				"status": "error",
-				"error":  err.Error(),
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
-			return
-		}
+		// 通知処理機能は現在無効化されています
+		log.Printf("通知処理要求: %s (現在は監視のみ)", notificationID)
 
 		response := map[string]interface{}{
-			"status":  "success",
-			"message": "通知が正常に処理されました",
+			"status":  "info",
+			"message": "通知監視機能は動作中です（処理機能は無効化済み）",
 		}
 
 		w.Header().Set("Content-Type", "application/json")

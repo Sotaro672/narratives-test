@@ -28,6 +28,15 @@ service firebase.storage {
     // アバター画像（SNS用）
     match /avatars/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      // ビジネスユーザーはアバター画像を読み取り可能
+      allow read: if isBusinessUser();
+    }
+    
+    // アバターアイコン画像（SNS用）- 追加
+    match /avatar_icons/{userId}/{allPaths=**} {
+      allow read; // すべてのユーザーが読み取り可能
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
       // ビジネスユーザーは全てのアバター画像を読み取り可能
       allow read: if isBusinessUser();
     }

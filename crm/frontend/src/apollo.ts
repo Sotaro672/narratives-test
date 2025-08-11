@@ -1,9 +1,15 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
+// グローバル変数からエンドポイントを取得するか、ローカルURLを使用
+const getGraphQLEndpoint = () => {
+  // @ts-ignore
+  return window.GRAPHQL_ENDPOINT || 'https://narratives-crm-699392181476-221090465383.us-central1.run.app/graphql';
+};
+
 // GraphQLサーバーのHTTPリンクを作成
 const httpLink = createHttpLink({
-  uri: 'http://localhost:8080/graphql', // ローカル開発用のGraphQLエンドポイント
+  uri: getGraphQLEndpoint()
 });
 
 // 認証用のコンテキストリンク（将来的にFirebase認証トークンを追加可能）

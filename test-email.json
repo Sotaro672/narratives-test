@@ -1,0 +1,8 @@
+{
+  "to": ["caotailangaogang@gmail.com"],
+  "message": {
+    "subject": "Firebase Extensions テストメール",
+    "html": "<h1>テストメール</h1><p>Firebase Extensionsからのテストメールです。</p><p>設定ファイル修正後のテスト送信です。</p>",
+    "text": "Firebase Extensionsからのテストメールです。設定ファイル修正後のテスト送信です。"
+  }
+}

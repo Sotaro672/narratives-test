@@ -1,24 +1,30 @@
 ﻿package services
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"firebase.google.com/go/v4/auth"
 )
 
 // FirebaseAuthService Firebase認証サービス
 type FirebaseAuthService struct {
-	client *auth.Client
+	client          *auth.Client
+	firestoreClient *firestore.Client
 }
 
 // NewFirebaseAuthService Firebase認証サービスのコンストラクタ
-func NewFirebaseAuthService(client *auth.Client) *FirebaseAuthService {
+func NewFirebaseAuthService(client *auth.Client, firestoreClient *firestore.Client) *FirebaseAuthService {
 	return &FirebaseAuthService{
-		client: client,
+		client:          client,
+		firestoreClient: firestoreClient,
 	}
 }
 
@@ -95,109 +101,71 @@ func (fas *FirebaseAuthService) DeleteUserByEmail(ctx context.Context, email str
 
 	log.Printf("DeleteUserByEmail: Firebase AuthenticationからビジネスユーザーID %s (email: %s) を削除しました", user.UID, email)
 	return nil
-} // SendCustomVerificationEmail カスタム認証メールを送信
-func (fas *FirebaseAuthService) SendCustomVerificationEmail(ctx context.Context, email, displayName, temporaryPassword string, emailService *EmailService) error {
-	// まずユーザーが存在するか確認
-	_, err := fas.client.GetUserByEmail(ctx, email)
+}
+
+// ResendVerificationEmail 認証メール再送信（フロントエンドに委譲）
+func (fas *FirebaseAuthService) ResendVerificationEmail(ctx context.Context, email string) error {
+	log.Printf("ResendVerificationEmail: 認証メール再送信要求 (email: %s)", email)
+
+	// ユーザー情報を取得
+	user, err := fas.client.GetUserByEmail(ctx, email)
 	if err != nil {
 		if auth.IsUserNotFound(err) {
-			// 存在しなければユーザー作成
-			params := (&auth.UserToCreate{}).
-				Email(email).
-				EmailVerified(false).
-				Password(temporaryPassword).
-				DisplayName(displayName).
-				Disabled(false)
-			_, createErr := fas.client.CreateUser(ctx, params)
-			if createErr != nil {
-				return fmt.Errorf("ユーザー作成に失敗しました: %v", createErr)
-			}
-		} else {
-			// その他のエラーは即return
-			return fmt.Errorf("ユーザー情報取得に失敗しました: %v", err)
+			return fmt.Errorf("ユーザーが見つかりません: %s", email)
 		}
+		return fmt.Errorf("ユーザー情報の取得に失敗: %v", err)
 	}
 
-	// Firebase公式認証リンクを生成
-	verificationLink, err := fas.GenerateEmailVerificationLink(ctx, email)
+	// Firestoreからビジネスユーザー情報を取得
+	userDoc, err := fas.firestoreClient.Collection("business_users").Doc(user.UID).Get(ctx)
 	if err != nil {
-		return fmt.Errorf("認証リンクの生成に失敗しました: %v", err)
+		return fmt.Errorf("ビジネスユーザー情報の取得に失敗: %v", err)
 	}
 
-	// カスタムメール本文を作成
-	subject := fmt.Sprintf("%s様、Narrativesへようこそ！メール認証のお願い", displayName)
-	body := fas.createCustomVerificationEmailBody(displayName, email, temporaryPassword, verificationLink)
-
-	// メール送信（MailServiceの公開メソッドを通じて）
-	if err := emailService.MailService.SendEmail(email, subject, body); err != nil {
-		return err
+	var businessUserData map[string]interface{}
+	if err := userDoc.DataTo(&businessUserData); err != nil {
+		return fmt.Errorf("ビジネスユーザーデータの変換に失敗: %v", err)
 	}
 
-	// メール履歴の保存（ユーザー自身がsenderUserIDとなる）
-	if emailService.MailService != nil {
-		// メール履歴データ作成
-		now := time.Now()
-		mailData := MailData{
-			UserID:      email, // ユーザーのメールアドレスをIDとして使用
-			RecipientID: email,
-			Subject:     subject,
-			Body:        body,
-			Status:      "sent",
-			CreatedAt:   now,
-			SentAt:      &now,
-		}
-
-		// Firestoreに保存
-		ctx := context.Background() // コンテキストが必要
-		if err := emailService.MailService.SaveMailHistory(ctx, mailData); err != nil {
-			log.Printf("メール履歴の保存に失敗しましたが、メール自体は送信されています: %v", err)
-		}
+	// 一時パスワードの存在確認
+	temporaryPassword, _ := businessUserData["temporary_password"].(string)
+	if temporaryPassword == "" {
+		return fmt.Errorf("一時パスワードが設定されていません")
 	}
 
+	log.Printf("ResendVerificationEmail: ユーザー確認完了 (UserID: %s, email: %s)", user.UID, email)
+	log.Printf("注意: 実際のメール送信はフロントエンドのauthenticationEmailService.tsで処理されます")
+	
 	return nil
-} // createCustomVerificationEmailBody カスタム認証メールの本文を作成
-func (fas *FirebaseAuthService) createCustomVerificationEmailBody(displayName, email, temporaryPassword, verificationLink string) string {
-	// 常にハードコードされたテンプレートを使用し、テンプレートファイルの読み込み失敗を避ける
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "https://narratives-crm-site.web.app" // デフォルト値
+}
+
+// CheckEmailVerificationStatus メール認証状態をチェックし、必要に応じてWelcomeメールを送信
+func (fas *FirebaseAuthService) CheckEmailVerificationStatus(ctx context.Context, userID string) error {
+	// Firebase Cloud Functionsのエンドポイントを呼び出し
+	functionsURL := os.Getenv("FIREBASE_FUNCTIONS_URL")
+	if functionsURL == "" {
+		functionsURL = "https://checkemailverificationstatus-6zr6g73pga-an.a.run.app"
 	}
-	loginURL := frontendURL
 
-	// デバッグログ
-	log.Printf("メール認証リンクの生成: %s のための認証メールを作成します", email)
+	payload := map[string]string{
+		"userId": userID,
+	}
 
-	return fmt.Sprintf(`
-お疲れ様です。%s様
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("JSONエンコードに失敗: %v", err)
+	}
 
-Narratives CRMシステムへの招待が完了しました。
+	resp, err := http.Post(functionsURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("Cloud Functionsの呼び出しに失敗: %v", err)
+	}
+	defer resp.Body.Close()
 
-【重要】まず最初にメールアドレスの認証をお願いします
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Cloud Functionsからエラーレスポンス: %d", resp.StatusCode)
+	}
 
-下記のリンクをクリックして、メールアドレスの認証を完了してください：
-%s
-
-認証完了後、以下の情報でログインしてください：
-
-【ログイン情報】
-メールアドレス: %s
-一時パスワード: %s
-ログインURL: %s
-
-【初回ログインの手順】
-1. 上記の認証リンクをクリックしてメール認証を完了
-2. ログインURLにアクセス
-3. メールアドレスとパスワードでログイン
-4. 初回ログイン後、パスワードの変更をお願いします
-
-【重要な注意事項】
-このパスワードは一時的なものです
-セキュリティのため、初回ログイン後に必ずパスワードを変更してください
-このメールは機密情報を含むため、適切に管理してください
-メール認証を完了しないとログインできません
-
-何かご質問がございましたら、管理者までお問い合わせください。
-
-Narratives CRM システム
-`, displayName, verificationLink, email, temporaryPassword, loginURL)
+	log.Printf("メール認証状態のチェックが完了しました (UserID: %s)", userID)
+	return nil
 }

@@ -36,56 +36,54 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.narrativesApiProxy = exports.onUserEmailVerified = void 0;
+exports.narrativesApiProxy = exports.checkEmailVerificationStatus = exports.onUserEmailVerified = void 0;
 var functions = require("firebase-functions");
 var admin = require("firebase-admin");
 // Initialize Firebase Admin
 admin.initializeApp();
 var NARRATIVES_SNS_API_BASE_URL = "https://narratives-api-765852113927.asia-northeast1.run.app";
-// ユーザーのメール認証状態が変更された時のトリガー
-exports.onUserEmailVerified = functions.auth.user().onUpdate(function (change, context) { return __awaiter(void 0, void 0, void 0, function () {
-    var beforeUser, afterUser, db, businessUserDoc, businessUserData, existingNotifications, notificationData, error_1;
+// business_usersコレクションの変更を監視してメール認証状態をチェック
+exports.onUserEmailVerified = functions.firestore
+    .document('business_users/{userId}')
+    .onUpdate(function (change, context) { return __awaiter(void 0, void 0, void 0, function () {
+    var beforeData, afterData, userId, userRecord, db, existingNotifications, notificationData, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                beforeUser = change.before;
-                afterUser = change.after;
-                if (!(!beforeUser.emailVerified && afterUser.emailVerified)) return [3 /*break*/, 6];
-                console.log("User ".concat(afterUser.uid, " verified their email: ").concat(afterUser.email));
+                beforeData = change.before.data();
+                afterData = change.after.data();
+                userId = context.params.userId;
                 _a.label = 1;
             case 1:
-                _a.trys.push([1, 5, , 6]);
-                db = admin.firestore();
-                return [4 /*yield*/, db.collection('business_users').doc(afterUser.uid).get()];
+                _a.trys.push([1, 7, , 8]);
+                return [4 /*yield*/, admin.auth().getUser(userId)];
             case 2:
-                businessUserDoc = _a.sent();
-                if (!businessUserDoc.exists) {
-                    console.log("Business user document not found for ".concat(afterUser.uid));
-                    return [2 /*return*/];
-                }
-                businessUserData = businessUserDoc.data();
+                userRecord = _a.sent();
+                if (!userRecord.emailVerified) return [3 /*break*/, 5];
+                console.log("User ".concat(userId, " has verified email, checking for notification"));
+                db = admin.firestore();
                 // 一時パスワードが設定されているかチェック
-                if (!(businessUserData === null || businessUserData === void 0 ? void 0 : businessUserData.temporary_password)) {
-                    console.log("No temporary password found for ".concat(afterUser.uid));
+                if (!afterData.temporary_password) {
+                    console.log("No temporary password found for ".concat(userId));
                     return [2 /*return*/];
                 }
                 return [4 /*yield*/, db.collection('notifications')
-                        .where('user_id', '==', afterUser.uid)
+                        .where('user_id', '==', userId)
                         .where('notification_type', '==', 'welcome_email')
                         .where('processed', '==', false)
                         .get()];
             case 3:
                 existingNotifications = _a.sent();
                 if (!existingNotifications.empty) {
-                    console.log("Welcome email notification already exists for ".concat(afterUser.uid));
+                    console.log("Welcome email notification already exists for ".concat(userId));
                     return [2 /*return*/];
                 }
                 notificationData = {
                     notification_id: db.collection('notifications').doc().id,
-                    user_id: afterUser.uid,
+                    user_id: userId,
                     notification_type: 'welcome_email',
                     title: 'アカウント作成完了',
-                    body: "".concat(businessUserData.last_name, " ").concat(businessUserData.first_name, "\u69D8\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u304C\u4F5C\u6210\u3055\u308C\u307E\u3057\u305F\u3002"),
+                    body: "".concat(afterData.last_name, " ").concat(afterData.first_name, "\u69D8\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u304C\u4F5C\u6210\u3055\u308C\u307E\u3057\u305F\u3002"),
                     created_at: admin.firestore.FieldValue.serverTimestamp(),
                     is_read: false,
                     read_at: null,
@@ -94,19 +92,97 @@ exports.onUserEmailVerified = functions.auth.user().onUpdate(function (change, c
                 return [4 /*yield*/, db.collection('notifications').add(notificationData)];
             case 4:
                 _a.sent();
-                console.log("Welcome email notification created for ".concat(afterUser.uid));
+                console.log("Welcome email notification created for ".concat(userId));
                 return [3 /*break*/, 6];
             case 5:
+                console.log("User ".concat(userId, " email not yet verified"));
+                _a.label = 6;
+            case 6: return [3 /*break*/, 8];
+            case 7:
                 error_1 = _a.sent();
-                console.error('Error creating welcome email notification:', error_1);
-                return [3 /*break*/, 6];
-            case 6: return [2 /*return*/];
+                console.error('Error checking user email verification:', error_1);
+                return [3 /*break*/, 8];
+            case 8: return [2 /*return*/];
+        }
+    });
+}); });
+// 定期的にメール認証状態をチェックするスケジュール関数
+exports.checkEmailVerificationStatus = functions.pubsub
+    .schedule('every 2 minutes')
+    .onRun(function (context) { return __awaiter(void 0, void 0, void 0, function () {
+    var db, businessUsersSnapshot, _i, _a, doc, userData, userId, userRecord, existingNotifications, notificationData, userError_1, error_2;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                console.log('Running scheduled email verification check');
+                _b.label = 1;
+            case 1:
+                _b.trys.push([1, 12, , 13]);
+                db = admin.firestore();
+                return [4 /*yield*/, db.collection('business_users')
+                        .where('temporary_password', '!=', null)
+                        .limit(50)
+                        .get()];
+            case 2:
+                businessUsersSnapshot = _b.sent();
+                _i = 0, _a = businessUsersSnapshot.docs;
+                _b.label = 3;
+            case 3:
+                if (!(_i < _a.length)) return [3 /*break*/, 11];
+                doc = _a[_i];
+                userData = doc.data();
+                userId = doc.id;
+                _b.label = 4;
+            case 4:
+                _b.trys.push([4, 9, , 10]);
+                return [4 /*yield*/, admin.auth().getUser(userId)];
+            case 5:
+                userRecord = _b.sent();
+                if (!userRecord.emailVerified) return [3 /*break*/, 8];
+                return [4 /*yield*/, db.collection('notifications')
+                        .where('user_id', '==', userId)
+                        .where('notification_type', '==', 'welcome_email')
+                        .where('processed', '==', false)
+                        .get()];
+            case 6:
+                existingNotifications = _b.sent();
+                if (!existingNotifications.empty) return [3 /*break*/, 8];
+                notificationData = {
+                    notification_id: db.collection('notifications').doc().id,
+                    user_id: userId,
+                    notification_type: 'welcome_email',
+                    title: 'アカウント作成完了',
+                    body: "".concat(userData.last_name, " ").concat(userData.first_name, "\u69D8\u306E\u30A2\u30AB\u30A6\u30F3\u30C8\u304C\u4F5C\u6210\u3055\u308C\u307E\u3057\u305F\u3002"),
+                    created_at: admin.firestore.FieldValue.serverTimestamp(),
+                    is_read: false,
+                    read_at: null,
+                    processed: false
+                };
+                return [4 /*yield*/, db.collection('notifications').add(notificationData)];
+            case 7:
+                _b.sent();
+                console.log("Scheduled: Welcome email notification created for ".concat(userId));
+                _b.label = 8;
+            case 8: return [3 /*break*/, 10];
+            case 9:
+                userError_1 = _b.sent();
+                console.log("User ".concat(userId, " not found in Firebase Auth:"), userError_1.message);
+                return [3 /*break*/, 10];
+            case 10:
+                _i++;
+                return [3 /*break*/, 3];
+            case 11: return [3 /*break*/, 13];
+            case 12:
+                error_2 = _b.sent();
+                console.error('Error in scheduled email verification check:', error_2);
+                return [3 /*break*/, 13];
+            case 13: return [2 /*return*/];
         }
     });
 }); });
 // CORS proxy function for narratives-test SNS API
 exports.narrativesApiProxy = functions.https.onRequest(function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var apiPath, targetUrl, cleanHeaders_1, response, responseData, error_2;
+    var apiPath, targetUrl, cleanHeaders_1, response, responseData, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -152,11 +228,11 @@ exports.narrativesApiProxy = functions.https.onRequest(function (req, res) { ret
                 res.status(response.status).send(responseData);
                 return [3 /*break*/, 5];
             case 4:
-                error_2 = _a.sent();
-                console.error("Proxy error:", error_2);
+                error_3 = _a.sent();
+                console.error("Proxy error:", error_3);
                 res.status(500).json({
                     error: "Proxy error",
-                    message: error_2 instanceof Error ? error_2.message : "Unknown error"
+                    message: error_3 instanceof Error ? error_3.message : "Unknown error"
                 });
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
