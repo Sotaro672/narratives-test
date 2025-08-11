@@ -20,23 +20,12 @@ export interface AuthResult {
   user?: BusinessUserModel;
   error?: string;
   requiresPasswordChange?: boolean;
-  temporaryPassword?: string; // 一時パスワードを追加
+  temporaryPassword?: string; // 互換のため残しますが、自己サインアップでは設定しません
 }
 
 /**
- * 一時パスワード生成
- */
-const generateTemporaryPassword = (): string => {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 12; i++) {
-    result += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  return result;
-};
-
-/**
  * Sign Inでユーザーを新規作成してFirestoreに保存
+ * （自己サインアップ時は一時パスワードを生成・保存しない）
  */
 export const createUserAccount = async (userData: {
   email: string;
@@ -49,16 +38,12 @@ export const createUserAccount = async (userData: {
 }): Promise<AuthResult> => {
   try {
     console.log('Creating user account for:', userData.email);
-    
-    // 一時パスワードを生成
-    const temporaryPassword = generateTemporaryPassword();
-    console.log('Generated temporary password:', temporaryPassword);
-    
-    // Firebase Authenticationでユーザー作成（一時パスワードを使用）
+
+    // Firebase Authenticationでユーザー作成（入力されたパスワードを使用）
     const userCredential = await createUserWithEmailAndPassword(
       crmAuth, 
       userData.email, 
-      temporaryPassword // 一時パスワードを使用
+      userData.password
     );
     
     const firebaseUser = userCredential.user;
@@ -80,7 +65,7 @@ export const createUserAccount = async (userData: {
       updatedAt: new Date()
     });
 
-    // Firestoreにユーザー情報を保存（business_usersコレクション）
+    // Firestoreにユーザー情報を保存（自己サインアップでは temporary_password / requires_password_change は保存しない）
     const firestoreData = {
       user_id: newUser.userId,
       first_name: newUser.firstName,
@@ -92,30 +77,19 @@ export const createUserAccount = async (userData: {
       role: newUser.role,
       status: newUser.status,
       belong_to: newUser.belongTo,
-      temporary_password: temporaryPassword, // 一時パスワードを保存
-      requires_password_change: true, // パスワード変更要求フラグ
       created_at: serverTimestamp(),
       updated_at: serverTimestamp()
     };
     
     console.log('Saving user data to Firestore:', firestoreData);
-    
     await setDoc(doc(crmDb, 'business_users', firebaseUser.uid), firestoreData);
 
     console.log('User created and saved to Firestore:', newUser.getFullName());
-    
-    // ユーザー作成後、一旦サインアウトしない（認証メール送信のため）
-    // await signOut(crmAuth); // この行をコメントアウト
-    
-    const result = {
+
+    return {
       success: true,
-      user: newUser,
-      temporaryPassword: temporaryPassword // 一時パスワードを返す
+      user: newUser
     };
-    
-    console.log('Returning auth result:', { ...result, temporaryPassword: '[REDACTED]' });
-    
-    return result;
     
   } catch (error: any) {
     console.error('Error creating user account:', error);
@@ -166,7 +140,7 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
       last_login_at: new Date(),
       updated_at: new Date(),
       status: 'active', // ログイン成功時にステータスをアクティブに
-      email_verified: true // ログイン成功時に認証済みに
+      email_verified: true // ※必要に応じてメール認証の真偽は本来Authの状態で判断してください
     });
     
     // BusinessUserModelインスタンス作成
@@ -263,6 +237,7 @@ export const getUserDetails = async (userId: string): Promise<BusinessUserModel 
 
 /**
  * 一時パスワードでのログイン機能（招待されたメンバー用）
+ * ※ 管理者の招待フローで business_users.temporary_password が設定されている場合のみ有効
  */
 export const loginWithTemporaryPassword = async (
   email: string, 
@@ -293,10 +268,10 @@ export const loginWithTemporaryPassword = async (
 
     console.log('User data retrieved:', user.toJSON());
 
-    // 一時パスワードかどうかをチェック
+    // 一時パスワードかどうかをチェック（自己サインアップでは temporary_password は存在しない想定）
     const hasTemporaryPassword = userData.temporary_password === password;
     
-    // ユーザーのステータスをチェック
+    // ステータス確認
     if (userData.status === 'suspended') {
       await signOut(crmAuth);
       return {
@@ -305,12 +280,12 @@ export const loginWithTemporaryPassword = async (
       };
     }
 
-    // 最終ログイン時刻を更新し、ステータスとメール認証状態も更新（business_usersコレクション）
+    // 最終ログイン時刻等を更新
     await updateDoc(doc(crmDb, 'business_users', firebaseUser.uid), {
       last_login_at: new Date(),
       updated_at: new Date(),
-      status: 'active', // ログイン成功時にステータスをアクティブに
-      email_verified: true // ログイン成功時に認証済みに
+      status: 'active',
+      email_verified: true
     });
 
     return {
@@ -365,7 +340,7 @@ export const changePassword = async (
     // パスワードを更新
     await updatePassword(user, newPassword);
 
-    // Firestoreから一時パスワードを削除（business_usersコレクション）
+    // Firestoreから一時パスワードを削除（招待フローで使われた場合のみ残っている）
     await updateDoc(doc(crmDb, 'business_users', user.uid), {
       temporary_password: null,
       password_changed_at: new Date(),
@@ -398,7 +373,7 @@ export const changePassword = async (
 };
 
 /**
- * 一時パスワードかどうかを確認
+ * 一時パスワードかどうかを確認（招待フロー用）
  */
 export const hasTemporaryPassword = async (): Promise<boolean> => {
   try {
@@ -422,31 +397,26 @@ export const hasTemporaryPassword = async (): Promise<boolean> => {
 };
 
 /**
- * Firebase Authentication上でユーザーを削除する
- * 管理者用機能として提供 (Admin SDK APIを使用)
+ * Firebase Authentication上でユーザーを削除する（管理者用）
  */
 export const deleteUserFromAuth = async (email: string): Promise<{success: boolean, message: string}> => {
   try {
-    // バックエンドURLの設定 - バックエンドが存在しない場合は、代替手段としてFirebaseユーザーは削除せず成功とする
     const backendUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://narratives-crm-699392181476-us-central1.run.app'  // Cloud Run URL
+      ? 'https://narratives-crm-699392181476-us-central1.run.app'
       : 'http://localhost:8080';
       
     console.log('Deleting user from Firebase Auth:', email, 'using backend:', backendUrl);
     
-    // バックエンドAPIを呼び出し
     try {
       console.log(`バックエンドAPI呼び出し開始: ${backendUrl}/api/auth/delete-user`);
-      
-      // Firebase Admin SDKを直接呼び出せないため、バックエンドAPIを使用
       const response = await fetch(`${backendUrl}/api/auth/delete-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        mode: 'cors', // CORS設定を明示的に指定
-        credentials: 'same-origin', // 認証情報の扱いを指定
+        mode: 'cors',
+        credentials: 'same-origin',
         body: JSON.stringify({ email }),
       });
       
@@ -463,12 +433,10 @@ export const deleteUserFromAuth = async (email: string): Promise<{success: boole
           try {
             const errorData = JSON.parse(responseText);
             errorMessage = errorData.message || errorMessage;
-          } catch (jsonError) {
-            // JSONではない場合はテキストをそのまま使用
+          } catch {
             errorMessage = responseText || `API エラー: ${response.status} ${response.statusText}`;
           }
-        } catch (e) {
-          // レスポンス本文の取得に失敗した場合
+        } catch {
           errorMessage = `API エラー: ${response.status} ${response.statusText}`;
         }
         
@@ -488,20 +456,14 @@ export const deleteUserFromAuth = async (email: string): Promise<{success: boole
         message: result.message || 'Firebase認証からユーザーを削除しました'
       };
     } catch (error) {
-      // ネットワークエラーの詳細な処理
       console.error('Firebase Authentication削除エラー:', error);
-      
-      // バックエンドが利用できないため、ユーザーにエラーは表示せず、
-      // Firestoreからの削除は成功したので、全体としては成功として扱う
-      if (error instanceof TypeError && error.message.includes('fetch')) {
+      if (error instanceof TypeError && (error as TypeError).message.includes('fetch')) {
         console.log('バックエンド接続エラーが発生しましたが、Firestoreからの削除は成功しています。');
         return {
           success: true,
           message: 'ユーザーがFirestoreから削除されました。Firebase Authenticationは利用できません。'
         };
       }
-      
-      // その他のエラーは通常どおり処理
       const errorMessage = `Firebase認証からの削除に失敗しました: ${(error as Error).message}`;
       return {
         success: false,
